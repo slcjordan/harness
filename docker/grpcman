@@ -1,0 +1,36 @@
+FROM ubuntu:22.04
+
+ARG APP_DIR
+
+# Install dependencies your AppImage might need (you have to check what they are)
+RUN apt-get update && apt-get install -y \
+    fuse \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdrm2 \
+    libfuse2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxkbcommon0 \
+    libxrandr2 \
+    squashfs-tools \
+    libdbus-glib-1-2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy extracted app into the container
+COPY ${APP_DIR}/ /opt/yourapp/
+
+# (Optional) Make sure binaries are executable
+RUN chmod +x /opt/yourapp/AppRun
+
+# Set the working directory
+WORKDIR /opt/yourapp
+
+# Set the entrypoint to the AppImage's AppRun
+ENTRYPOINT ["./AppRun"]
