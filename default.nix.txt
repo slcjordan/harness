@@ -1,0 +1,12 @@
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  packages = [
+    pkgs.hugo
+    pkgs.appimagekit
+    pkgs.squashfsTools
+    pkgs.binwalk
+    pkgs.telepresence2
+    pkgs.dnsutils
+  ];
+}
