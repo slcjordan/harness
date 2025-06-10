@@ -1,0 +1,13 @@
+<div x-data="streamComponent()" class="p-4 border rounded max-w-md mx-auto">
+  <h2 class="text-xl font-bold mb-2">WebSocket Status: <span x-text="status"></span></h2>
+
+  <button @click="connect('ws://localhost:1984/ws/whatever')" x-show="!connected" class="bg-blue-500 text-white px-4 py-2 rounded mb-2">Connect</button>
+  <button @click="disconnect()" x-show="connected" class="bg-red-500 text-white px-4 py-2 rounded mb-2">Disconnect</button>
+
+  <div class="mb-2">
+    <input type="text" x-ref="msgInput" placeholder="Enter message" class="border px-2 py-1 w-full" />
+    <button @click="sendMessage($refs.msgInput.value)" class="bg-green-500 text-white px-4 py-1 mt-1 rounded">Send</button>
+  </div>
+
+  <pre x-text="data.text" class="bg-gray-100 p-2 h-48 overflow-y-scroll border rounded"></pre>
+</div>
