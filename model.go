@@ -1,4 +1,5 @@
 package harness
 
-type Command struct {
-}
+type InteractiveExecInput struct{}
+
+type InteractiveExecOutput struct{}

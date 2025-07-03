@@ -6,4 +6,6 @@ title = 'Portal Tester'
 
 {{<tool-desc name="portal-tester">}}
 
-{{<sock-widget>}}
+{{<sock-widget endpoint="/whatever" >}}
+    {{<sock-widget-button val="2" text="2">}}
+{{</sock-widget>}}

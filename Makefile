@@ -10,7 +10,6 @@ docker-build-grpcman: .cache/${DEV_NAMESPACE}/artifacts/_grpcman_${GRPCMAN_VERSI
 		--file docker/grpcman \
 		--build-arg APP_DIR=$</squashfs-root \
 		--tag ${DEV_NAMESPACE}-grpcman \
-		--build-arg PORTAL_VERSION=${PORTAL_VERSION} \
 		.
 
 .PHONY: docker-build-harness
@@ -19,6 +18,7 @@ docker-build-harness:
 		--secret id=netrc,src=/home/jcrabtree/.netrc \
 		--file docker/harness \
 		--tag ${DEV_NAMESPACE}-harness \
+		--build-arg PORTAL_VERSION=${PORTAL_VERSION} \
 		.
 
 .PHONY: docker-run-harness

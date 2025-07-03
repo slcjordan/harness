@@ -7,22 +7,17 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/coder/websocket/wsjson"
 	"github.com/google/uuid"
+	"github.com/slcjordan/harness"
 )
 
-type Listener[T any] interface {
-	Message(string, string, T)
-	Closed(string)
-}
-
-type Server[T any] struct {
+type Server struct {
 	OriginPatterns []string
 	Conns          map[string]*websocket.Conn
-	Listener       Listener[T]
+	Listener       harness.Listener[[]byte]
 }
 
-func (s *Server[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Accept the WebSocket connection
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		OriginPatterns: s.OriginPatterns,
@@ -32,7 +27,7 @@ func (s *Server[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := uuid.New().String()
-	defer s.Listener.Closed(id)
+	defer s.Listener.Done(id)
 	defer conn.Close(websocket.StatusNormalClosure, "done")
 
 	log.Println("Client connected")
@@ -66,20 +61,16 @@ func (s *Server[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Read messages and echo them back
 	for {
-		var msg map[string]T
-		err := wsjson.Read(ctx, conn, &msg)
+		_, input, err := conn.Read(ctx)
 		if err != nil {
 			log.Println("read error:", err)
 			break
 		}
-		for topic, input := range msg {
-			s.Listener.Message(id, topic, input)
-		}
-
+		go s.Listener.Receive(id, input)
 	}
 }
 
-func (s *Server[T]) MaybeSend(id string, topic string, output T) {
+func (s *Server) MaybeSend(id string, output []byte) {
 	conn, ok := s.Conns[id]
 	if !ok {
 		// log.Errorf(conn.Context(), "could not find")
@@ -88,7 +79,7 @@ func (s *Server[T]) MaybeSend(id string, topic string, output T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := wsjson.Write(ctx, conn, output)
+	err := conn.Write(ctx, websocket.MessageText, output)
 	if err != nil {
 		// log.Println("write error:", err)
 	}
