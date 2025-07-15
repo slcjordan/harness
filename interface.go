@@ -1,10 +1,16 @@
 package harness
 
-type Listener[Req any] interface {
-	Receive(id string, req Req)
-	Done(id string)
+import "context"
+
+type Handler[Req, Resp any] interface {
+	Handle(context.Context, Req) (Resp, error)
 }
 
-type MaybeSender[Resp any] interface {
-	MaybeSend(id string, resp Resp)
+type Daemon interface {
+	Attach(id string)
+	Unattach(id string)
+}
+
+type Notifier[Evt any] interface {
+	Notify(id string, evt Evt)
 }

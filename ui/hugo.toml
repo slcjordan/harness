@@ -97,9 +97,9 @@ pagination.pagerSize = 5
 
       [languages.en.menu]
         [[languages.en.menu.main]]
-          identifier = "about"
-          name = "About"
-          url = "/app/about"
+          identifier = "portal"
+          name = "Portal"
+          url = "/pages/portal-tester"
         [[languages.en.menu.main]]
           identifier = "showcase"
           name = "Showcase"

@@ -7,6 +7,8 @@ type ErrorCode int
 const (
 	_ ErrorCode = iota
 	ErrInvalidSetting
+	ErrContextCancelled
+	ErrTimeout
 )
 
 type Error struct {

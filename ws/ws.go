@@ -4,17 +4,21 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/coder/websocket"
 	"github.com/google/uuid"
 	"github.com/slcjordan/harness"
+	"github.com/slcjordan/harness/logger"
 )
 
 type Server struct {
 	OriginPatterns []string
+	mu             sync.Mutex
 	Conns          map[string]*websocket.Conn
-	Listener       harness.Listener[[]byte]
+	Model          harness.Daemon
+	Command        harness.Handler[[]byte, struct{}]
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +31,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := uuid.New().String()
-	defer s.Listener.Done(id)
+	s.setConn(id, conn)
+	defer s.deleteConn(id)
+	s.Model.Attach(id)
+	defer s.Model.Unattach(id)
 	defer conn.Close(websocket.StatusNormalClosure, "done")
 
 	log.Println("Client connected")
@@ -66,14 +73,41 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Println("read error:", err)
 			break
 		}
-		go s.Listener.Receive(id, input)
+		go func() {
+			_, err := s.Command.Handle(ctx, input)
+			if err != nil {
+				log.Println("read error:", err)
+			}
+		}()
 	}
 }
 
-func (s *Server) MaybeSend(id string, output []byte) {
-	conn, ok := s.Conns[id]
+func (s *Server) getConn(id string) (*websocket.Conn, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result, ok := s.Conns[id]
+	return result, ok
+}
+
+func (s *Server) deleteConn(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.Conns, id)
+}
+
+func (s *Server) setConn(id string, conn *websocket.Conn) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.Conns[id] = conn
+}
+
+func (s *Server) Notify(id string, output []byte) {
+	conn, ok := s.getConn(id)
 	if !ok {
-		// log.Errorf(conn.Context(), "could not find")
+		logger.Errorf(context.TODO(), "could not find ws conn: %q", id)
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -81,6 +115,7 @@ func (s *Server) MaybeSend(id string, output []byte) {
 
 	err := conn.Write(ctx, websocket.MessageText, output)
 	if err != nil {
-		// log.Println("write error:", err)
+		logger.Infof(context.TODO(), "could not send to ws %q: %s", id, err)
+		return
 	}
 }

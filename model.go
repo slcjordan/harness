@@ -1,5 +1,19 @@
 package harness
 
-type InteractiveExecInput struct{}
+type Stream uint8
 
-type InteractiveExecOutput struct{}
+const (
+	Stdin Stream = iota
+	Stdout
+	Stderr
+)
+
+type CommandEvent struct {
+	Stream Stream
+	Data   []byte
+}
+
+type InteractiveInput struct {
+	Stream Stream
+	Data   []byte
+}

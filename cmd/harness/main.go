@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -11,28 +10,39 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/slcjordan/harness/cli"
 	"github.com/slcjordan/harness/config"
+	"github.com/slcjordan/harness/exec"
+	"github.com/slcjordan/harness/json"
+	"github.com/slcjordan/harness/logger"
 	"github.com/slcjordan/harness/ws"
 )
 
 func main() {
-	data, err := os.ReadFile("/tmp/portal_test.key")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(data))
+	logger.Init()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// data, err := os.ReadFile("/tmp/portal_test.key")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(string(data))
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
 	fs := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("fileserver got: %q\n", r.URL)
 		http.FileServer(http.Dir(config.HTTPServer.FileRoot)).ServeHTTP(w, r)
 	})
+	enc := &json.InteractiveCommandEncoder{}
+	daemon := exec.StartInteractive(ctx, enc, "cat")
+	enc.Command = daemon
+	ws := &ws.Server{
+		Conns:   make(map[string]*websocket.Conn),
+		Model:   daemon,
+		Command: enc,
+	}
+	enc.Listener = ws
 	r.Handle("/app/*", http.StripPrefix("/app/", fs))
-	r.Handle("/ws/*", http.StripPrefix("/ws/", &ws.Server{
-
-		Conns:    make(map[string]*websocket.Conn),
-		Listener: any{},
-	}))
+	r.Handle("/app/ws/*", http.StripPrefix("/app/ws/", ws))
 	/*
 		r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/app/index.html", http.StatusMovedPermanently)
@@ -40,12 +50,12 @@ func main() {
 	*/
 
 	c := cli.NewCommand("serve", "run http server", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
-		fmt.Printf("listening at %q\n", config.HTTPServer.Addr)
+		logger.Infof(ctx, "listening at %q\n", config.HTTPServer.Addr)
 		return http.ListenAndServe(config.HTTPServer.Addr, r)
 	}), cli.WithHTTPServerFlags)
 
-	err = c.Run(context.Background(), os.Args)
+	err := c.Run(ctx, os.Args)
 	if err != nil {
-		fmt.Println(err)
+		logger.Infof(ctx, "application error: %s", err)
 	}
 }

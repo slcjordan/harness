@@ -1,0 +1,38 @@
+
+FROM golang:1.24 AS builder
+ARG PORTAL_VERSION
+
+ENV GOPRIVATE=source.vivint.com
+
+RUN apt-get update
+
+RUN mkdir -p /go/src/github.com/slcjordan/harness
+
+WORKDIR /go/src/github.com/slcjordan/harness
+
+COPY . .
+
+RUN go build -o /go/bin/parsepk ./cmd/parsepk
+
+RUN --mount=type=secret,id=netrc,target=/root/.netrc \
+    --mount=type=cache,target=/go/pkg/mod \
+    update-ca-certificates && go install source.vivint.com/pl/portal/cmd/portal-tester@${PORTAL_VERSION} \
+    && parsepk /go/pkg/mod/source.vivint.com/pl/portal@${PORTAL_VERSION}/auth/camera_jwt/test_key.go /tmp/portal_test.key
+
+RUN --mount=type=secret,id=netrc,target=/root/.netrc \
+    --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    update-ca-certificates && ls && go build -o /usr/local/bin/harness ./cmd/harness/main.go
+
+FROM ubuntu:24.04
+
+COPY --from=builder /tmp/portal_test.key /tmp/portal_test.key
+COPY --from=builder /go/bin/portal-tester /usr/local/bin/portal-tester
+COPY --from=builder /usr/local/bin/harness /usr/local/bin/harness
+COPY ./ui/public /srv/harness
+
+ENV HARNESS_HTTPSERVER_FILEROOT=/srv/harness
+ENV HARNESS_HTTPSERVER_ADDR=:1984
+EXPOSE 1984
+
+CMD harness

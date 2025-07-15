@@ -1,10 +1,13 @@
 <div x-data="streamComponent()" class="p-4 border rounded max-w-md mx-auto">
   <h2 class="text-xl font-bold mb-2">WebSocket Status: <span x-text="status"></span></h2>
 
-  <button @click="connect('ws://{{.Site.BaseURL}}/ws{{ .Get "endpoint" }}')" x-show="!connected" class="bg-blue-500 text-white px-4 py-2 rounded mb-2">Connect</button>
-  <button @click="disconnect()" x-show="connected" class="bg-red-500 text-white px-4 py-2 rounded mb-2">Disconnect</button>
+  <button @click="connect(urlJoin('{{.Site.BaseURL}}', 'ws', '{{ .Get "endpoint" }}'))" x-show="!connected" class="bg-blue-500 text-white px-4 py-2 rounded mb-2">Connect</button>
 
-  {{ .Inner }}
+  <div x-show="connected">
+    <button @click="socket.close()" x-show="connected" class="bg-red-500 text-white px-4 py-2 rounded mb-2">Disconnect</button>
 
-  <pre x-text="data.text" class="bg-gray-100 p-2 h-48 overflow-y-scroll border rounded"></pre>
+    {{ .Inner }}
+
+    <pre x-text="data" class="bg-gray-100 p-2 h-48 overflow-y-scroll border rounded"></pre>
+  </div>
 </div>

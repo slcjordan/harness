@@ -1,31 +1,33 @@
 package json
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/slcjordan/harness"
+	"github.com/slcjordan/harness/logger"
 )
 
 type InteractiveCommandEncoder struct {
-	Listener    harness.Listener[harness.InteractiveExecInput]
-	MaybeSender harness.MaybeSender[[]byte]
+	Command  harness.Handler[harness.InteractiveInput, struct{}]
+	Listener harness.Notifier[[]byte]
 }
 
-func (p *InteractiveCommandEncoder) Receive(id string, req []byte) {
-	var input harness.InteractiveExecInput
+func (p *InteractiveCommandEncoder) Handle(ctx context.Context, req []byte) (struct{}, error) {
+	var input harness.InteractiveInput
 	err := json.Unmarshal(req, &input)
 	if err != nil {
-		// TODO log
-		return
+		return struct{}{}, fmt.Errorf("handler error: %w", err)
 	}
-	p.Listener.Receive(id, input)
+	return p.Command.Handle(ctx, input)
 }
 
-func (p *InteractiveCommandEncoder) Send(id string, resp harness.InteractiveExecOutput) {
+func (p *InteractiveCommandEncoder) Notify(id string, resp harness.CommandEvent) {
 	output, err := json.Marshal(resp)
 	if err != nil {
-		// TODO log
+		logger.Errorf(context.TODO(), "could not marshal command event: %s", err)
 		return
 	}
-	p.MaybeSender.MaybeSend(id, output)
+	p.Listener.Notify(id, output)
 }
