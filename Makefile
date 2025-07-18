@@ -23,26 +23,6 @@ hugo-build:
 		hugomods/hugo:${HUGO_VERSION} \
 			hugo --source /ui
 
-.PHONY: docker-build-harness
-docker-build-harness:
-	DOCKER_BUILDKIT=1 docker build \
-		--secret id=netrc,src=/home/jcrabtree/.netrc \
-		--file docker/harness \
-		--tag ${DEV_NAMESPACE}-harness \
-		--build-arg PORTAL_VERSION=${PORTAL_VERSION} \
-		.
-
-# TODO random port
-.PHONY: docker-run-harness
-docker-run-harness: docker-build-harness
-	docker run \
-		--rm \
-		--interactive \
-		--tty \
-		--publish 1984:1984 \
-		--volume ${PWD}/ui/public:/srv/harness \
-		${DEV_NAMESPACE}-harness
-
 .PHONY: docker-build-harness-buildkit
 docker-build-harness-buildkit: hugo-build
 	DOCKER_BUILDKIT=1 docker build \
@@ -52,6 +32,7 @@ docker-build-harness-buildkit: hugo-build
 		--build-arg PORTAL_VERSION=${PORTAL_VERSION} \
 		.
 
+# TODO random port
 .PHONY: docker-run-harness-buildkit
 docker-run-harness-buildkit: docker-build-harness-buildkit
 	docker run \

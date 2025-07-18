@@ -1,10 +1,11 @@
 package exec
 
 import (
-	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -26,6 +27,8 @@ type Interactive struct {
 }
 
 func StartInteractive(ctx context.Context, listener harness.Notifier[harness.CommandEvent], path string, args ...string) *Interactive {
+	ctx = logger.With(ctx, "path", path)
+	ctx = logger.With(ctx, "args", args)
 	result := &Interactive{
 		ctx:         ctx,
 		input:       make(chan []byte),
@@ -53,25 +56,34 @@ func StartInteractive(ctx context.Context, listener harness.Notifier[harness.Com
 			logger.Errorf(ctx, "%q could not pipe stderr: %s", cmd, err)
 			return
 		}
+		go result.notify(harness.Stdout, io.TeeReader(stdout, os.Stdout))
+		go result.notify(harness.Stderr, io.TeeReader(stderr, os.Stderr))
 		err = cmd.Start()
+		go io.WriteString(stdin, "k")
 		if err != nil {
 			logger.Errorf(ctx, "%q could not start: %s", cmd, err)
 			return
 		}
-		go result.notify(harness.Stdout, stdout)
-		go result.notify(harness.Stderr, stderr)
 
 		go func() {
 			for {
 				select {
 				case data := <-result.input:
-					io.Copy(stdin, bytes.NewReader(data))
+					input := make([]byte, len(data))
+					copy(input, data)
+					fmt.Printf("%q\n", string(input))
+					io.Copy(stdin, bytes.NewReader(input))
 				case <-ctx.Done():
 					return
 				}
 			}
 		}()
-		cmd.Wait()
+		err = cmd.Wait()
+		if err != nil {
+			logger.Errorf(ctx, "%q while running: %s", cmd, err)
+			return
+		}
+		logger.Infof(ctx, "application exited")
 	}()
 
 	return result
@@ -91,15 +103,18 @@ func (i *Interactive) notifyListeners(evt harness.CommandEvent) {
 }
 
 func (i *Interactive) notify(s harness.Stream, r io.Reader) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Bytes()
+	var buff [1024]byte
+	for {
+		n, err := r.Read(buff[:])
+		if err != nil {
+			logger.Errorf(i.ctx, "error while scanning stream %d: %s", s, err)
+			return
+		}
+		line := make([]byte, n)
+		copy(line, buff[:])
+		logger.Infof(i.ctx, "[%d] %s", s, string(line))
 		go i.notifyListeners(harness.CommandEvent{Stream: s, Data: line})
 	}
-	if err := scanner.Err(); err != nil {
-		logger.Errorf(context.TODO(), "%q: error while scanning stream %d: %s", i.cmd.String(), s, err)
-	}
-
 }
 
 func (i *Interactive) Attach(id string) {

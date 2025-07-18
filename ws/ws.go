@@ -2,7 +2,6 @@ package ws
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -19,6 +18,7 @@ type Server struct {
 	Conns          map[string]*websocket.Conn
 	Model          harness.Daemon
 	Command        harness.Handler[[]byte, struct{}]
+	Listener       harness.Notifier[harness.CommandEvent]
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +27,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		OriginPatterns: s.OriginPatterns,
 	})
 	if err != nil {
-		log.Println("accept error:", err)
+		logger.Infof(r.Context(), "accept error: %s", err)
 		return
 	}
 	id := uuid.New().String()
@@ -37,7 +37,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer s.Model.Unattach(id)
 	defer conn.Close(websocket.StatusNormalClosure, "done")
 
-	log.Println("Client connected")
+	logger.Infof(r.Context(), "session started: %q", id)
 
 	ctx := r.Context()
 
@@ -56,7 +56,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// Ping the client to keep the connection alive
 				err := conn.Ping(ctx)
 				if err != nil {
-					log.Println("ping error:", err)
+					logger.Infof(r.Context(), "ping error: %s", err)
 					conn.Close(websocket.StatusGoingAway, "ping failed")
 					return
 				}
@@ -66,17 +66,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Read messages and echo them back
+	// Read messages and handle them
 	for {
 		_, input, err := conn.Read(ctx)
 		if err != nil {
-			log.Println("read error:", err)
+			logger.Infof(r.Context(), "read error: %s", err)
 			break
 		}
 		go func() {
 			_, err := s.Command.Handle(ctx, input)
 			if err != nil {
-				log.Println("read error:", err)
+				logger.Infof(r.Context(), "handle error: %s", err)
+				s.Listener.Notify(id, harness.CommandEvent{Stream: harness.Stderr, Data: []byte(err.Error())})
 			}
 		}()
 	}

@@ -33,12 +33,13 @@ func main() {
 		http.FileServer(http.Dir(config.HTTPServer.FileRoot)).ServeHTTP(w, r)
 	})
 	enc := &json.InteractiveCommandEncoder{}
-	daemon := exec.StartInteractive(ctx, enc, "cat")
+	daemon := exec.StartInteractive(ctx, enc, "portal-tester", "-portalHost", "portal", "-cameraJWT", "", "-uuid", "a6911eb4-c4be-4986-adec-584e9ae47a66", "-run", "sendDetectionEvents", "-input-file", "/dev/stdin")
 	enc.Command = daemon
 	ws := &ws.Server{
-		Conns:   make(map[string]*websocket.Conn),
-		Model:   daemon,
-		Command: enc,
+		Conns:    make(map[string]*websocket.Conn),
+		Model:    daemon,
+		Command:  enc,
+		Listener: enc,
 	}
 	enc.Listener = ws
 	r.Handle("/app/*", http.StripPrefix("/app/", fs))
@@ -50,7 +51,7 @@ func main() {
 	*/
 
 	c := cli.NewCommand("serve", "run http server", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
-		logger.Infof(ctx, "listening at %q\n", config.HTTPServer.Addr)
+		logger.Infof(ctx, "listening at %q", config.HTTPServer.Addr)
 		return http.ListenAndServe(config.HTTPServer.Addr, r)
 	}), cli.WithHTTPServerFlags)
 

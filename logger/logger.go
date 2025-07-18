@@ -12,6 +12,7 @@ import (
 
 func Init() {
 	cfg := zap.NewProductionEncoderConfig()
+	cfg.EncodeTime = zapcore.RFC3339TimeEncoder
 	encoder := zapcore.NewConsoleEncoder(cfg)
 
 	infoLevel := zap.LevelEnablerFunc(func(l zapcore.Level) bool {

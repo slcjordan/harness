@@ -1,6 +1,7 @@
 
 FROM golang:1.24 AS builder
 ARG PORTAL_VERSION
+# ARG PROTODEF_VERSION
 
 ENV GOPRIVATE=source.vivint.com
 
@@ -17,7 +18,12 @@ RUN go build -o /go/bin/parsepk ./cmd/parsepk
 RUN --mount=type=secret,id=netrc,target=/root/.netrc \
     --mount=type=cache,target=/go/pkg/mod \
     update-ca-certificates && go install source.vivint.com/pl/portal/cmd/portal-tester@${PORTAL_VERSION} \
-    && parsepk /go/pkg/mod/source.vivint.com/pl/portal@${PORTAL_VERSION}/auth/camera_jwt/test_key.go /tmp/portal_test.key
+    && parsepk /go/pkg/mod/source.vivint.com/pl/portal@*/auth/camera_jwt/test_key.go /tmp/portal_test.key
+
+# RUN --mount=type=secret,id=netrc,target=/root/.netrc \
+#     --mount=type=cache,target=/go/pkg/mod \
+#     update-ca-certificates && go install source.vivint.com/pl/protodef/tools/proto-parser/main.go@${PROTODEF_VERSION} \
+#     && find /go/pkg/mod/source.vivint.com/pl/portal@${PROTODEF_VERSION}/ -iname '*.protoset' | xargs cat >> /tmp/combined.protoset
 
 RUN --mount=type=secret,id=netrc,target=/root/.netrc \
     --mount=type=cache,target=/go/pkg/mod \
@@ -27,8 +33,10 @@ RUN --mount=type=secret,id=netrc,target=/root/.netrc \
 FROM ubuntu:24.04
 
 COPY --from=builder /tmp/portal_test.key /tmp/portal_test.key
+# COPY --from=builder /tmp/combined.protoset /tmp/combined.protoset
 COPY --from=builder /go/bin/portal-tester /usr/local/bin/portal-tester
 COPY --from=builder /usr/local/bin/harness /usr/local/bin/harness
+
 COPY ./ui/public /srv/harness
 
 ENV HARNESS_HTTPSERVER_FILEROOT=/srv/harness

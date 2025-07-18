@@ -16,7 +16,7 @@ function streamComponent() {
       };
 
       this.socket.onmessage = (e) => {
-        this.data = this.data + "\n" + encodeURIComponent(atob(JSON.parse(e.data).Data))
+        this.data = this.data + atob(JSON.parse(e.data).Data)
       };
 
       this.socket.onclose = () => {

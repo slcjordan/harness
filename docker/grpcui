@@ -1,8 +1,0 @@
-FROM tp-artifactory.vivint.com:5000/gobuild:1.23 AS builder
-
-# RUN curl -o /include/proto/github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options/annotations.proto \
-#   https://raw.githubusercontent.com/grpc-ecosystem/grpc-gateway/main/protoc-gen-openapiv2/options/annotations.proto
-
-FROM fullstorydev/grpcui
-
-COPY --from=builder /include /include
