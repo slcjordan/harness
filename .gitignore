@@ -4,3 +4,4 @@ default.nix
 .cache/
 ui/public
 ui/.hugo_build.lock
+dump.sql

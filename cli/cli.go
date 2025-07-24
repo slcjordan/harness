@@ -62,6 +62,7 @@ func (c *Command) Run(ctx context.Context, args []string) error {
 func WithHTTPServerFlags(c *Command) {
 	WithHTTPServerAddrFlag(c)
 	WithHTTPServerFileRootFlag(c)
+	WithHTTPServerKeyRootFlag(c)
 }
 
 func WithHTTPServerAddrFlag(c *Command) {
@@ -99,6 +100,83 @@ func WithHTTPServerFileRootFlag(c *Command) {
 				}
 				return nil
 			},
+		},
+	)
+}
+
+func WithHTTPServerKeyRootFlag(c *Command) {
+	c.cmd.Flags = append(
+		c.cmd.Flags,
+		&cli.StringFlag{
+			Name:        "httpserver-keyroot",
+			EnvVars:     []string{EnvPrefix + "HTTPSERVER_KEYROOT"},
+			Destination: &config.HTTPServer.KeyRoot,
+			Value:       config.HTTPServer.KeyRoot,
+			Action: func(c *cli.Context, val string) error {
+				info, err := os.Stat(config.HTTPServer.KeyRoot)
+				if err != nil {
+					return err
+				}
+				if !info.IsDir() {
+					return harness.Errorf(harness.ErrInvalidSetting, "%v is not a directory", config.HTTPServer.KeyRoot)
+				}
+				return nil
+			},
+		},
+	)
+}
+
+func WithSlackFlags(c *Command) {
+	WithSlackClientIDFlag(c)
+	WithSlackClientSecretFlag(c)
+	WithSlackRedirectURLFlag(c)
+}
+
+func WithSlackClientIDFlag(c *Command) {
+	c.cmd.Flags = append(
+		c.cmd.Flags,
+		&cli.StringFlag{
+			Name:        "slack-client-id",
+			Usage:       "address to listen on",
+			EnvVars:     []string{EnvPrefix + "SLACK_CLIENT_ID"},
+			Destination: &config.Slack.ClientID,
+			Value:       config.Slack.ClientID,
+		},
+	)
+}
+
+func WithSlackClientSecretFlag(c *Command) {
+	c.cmd.Flags = append(
+		c.cmd.Flags,
+		&cli.StringFlag{
+			Name:        "slack-client-secret",
+			EnvVars:     []string{EnvPrefix + "SLACK_CLIENT_SECRET"},
+			Destination: &config.Slack.ClientSecret,
+			Value:       config.Slack.ClientSecret,
+		},
+	)
+}
+
+func WithSlackRedirectURLFlag(c *Command) {
+	c.cmd.Flags = append(
+		c.cmd.Flags,
+		&cli.StringFlag{
+			Name:        "slack-redirect-url",
+			EnvVars:     []string{EnvPrefix + "SLACK_REDIRECT_URL"},
+			Destination: &config.Slack.RedirectURL,
+			Value:       config.Slack.RedirectURL,
+		},
+	)
+}
+
+func WithPostgresDSNFlag(c *Command) {
+	c.cmd.Flags = append(
+		c.cmd.Flags,
+		&cli.StringFlag{
+			Name:        "postgres-dsn",
+			EnvVars:     []string{EnvPrefix + "POSTGRES_DSN"},
+			Destination: &config.Postgres.DSN,
+			Value:       config.Postgres.DSN,
 		},
 	)
 }

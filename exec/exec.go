@@ -59,7 +59,6 @@ func StartInteractive(ctx context.Context, listener harness.Notifier[harness.Com
 		go result.notify(harness.Stdout, io.TeeReader(stdout, os.Stdout))
 		go result.notify(harness.Stderr, io.TeeReader(stderr, os.Stderr))
 		err = cmd.Start()
-		go io.WriteString(stdin, "k")
 		if err != nil {
 			logger.Errorf(ctx, "%q could not start: %s", cmd, err)
 			return

@@ -1,0 +1,95 @@
+services:
+  harness:
+    build:
+      context: .
+      dockerfile: docker/harness
+      secrets:
+        - netrc
+      args:
+        PORTAL_VERSION: ${PORTAL_VERSION}
+    depends_on:
+      - postgres
+    ports:
+      - "0:${PORT}"
+    environment:
+      HARNESS_HTTPSERVER_ADDR: :${PORT}
+      HARNESS_HTTPSERVER_KEYROOT: /var/harness/pki
+      HARNESS_SLACK_CLIENT_ID: ${HARNESS_SLACK_CLIENT_ID}
+      HARNESS_SLACK_CLIENT_SECRET: ${HARNESS_SLACK_CLIENT_SECRET}
+      HARNESS_SLACK_REDIRECT_URL: https://localhost:${PORT}/slack/oauth/callback
+      HARNESS_POSTGRES_DSN: postgresql://${PGUSER}:${PGPASSWORD}@postgres:${PGPORT}/${PGDATABASE}?sslmode=disable
+    volumes:
+      - pki:/var/harness/pki
+    networks:
+      - backend
+  workflow-worker:
+    build:
+      context: .
+      dockerfile: docker/worker
+      secrets:
+        - netrc
+    networks:
+      - backend
+    depends_on:
+      - workflow-server
+  workflow-server:
+    image: temporalio/auto-setup:${TEMPORALIO_VERSION}
+    depends_on:
+      - postgres
+    environment:
+      DB: postgres12
+      DBNAME: ${TEMPORALIO_DB}
+      DB_PORT: ${PGPORT}
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PWD: ${PGPASSWORD}
+    networks:
+      - backend
+    ports:
+      - "0:7233"
+      - "0:9090"
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    environment:
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_DB: ${PGDATABASE}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    networks:
+      - backend
+    ports:
+      - "0:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  migrate:
+    profiles:
+      - jobs
+    depends_on:
+      - postgres
+    networks:
+      - backend
+    volumes:
+      - ./${MIGRATE_PATH}:/${MIGRATE_PATH}
+    image: migrate/migrate:${GOMIGRATE_VERSION}
+    command: 
+      - "-database"
+      - "postgresql://${PGUSER}:${PGPASSWORD}@postgres:${PGPORT}/${PGDATABASE}?sslmode=disable"
+      - "-path"
+      - "/${MIGRATE_PATH}"
+      - "goto"
+      - "${MIGRATE_VERSION}"
+
+networks:
+  backend:
+
+volumes:
+  pgdata:
+  pki:
+
+secrets:
+  netrc:
+    file: /home/jcrabtree/.netrc

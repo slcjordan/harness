@@ -1,0 +1,5 @@
+-- InsertSlackOAuthResponse inserts an oauth response
+-- name: InsertSlackOAuthResponse :exec
+INSERT INTO slack_oauth_response (access_token, app_id, authed_user_access_token, authed_user_expires_in, authed_user_id, authed_user_refresh_token, authed_user_scope, authed_user_token_type, bot_user_id, enterprise_id, enterprise_name, error, expires_in, incoming_webhook_channel, incoming_webhook_channel_id, incoming_webhook_configuration_url, incoming_webhook_url, is_enterprise_install, metadata_cursor, metadata_messages, metadata_warnings, ok, refresh_token, scope, team_id, team_name, token_type)
+    VALUES (@access_token, @app_id, @authed_user_access_token, @authed_user_expires_in, @authed_user_id, @authed_user_refresh_token, @authed_user_scope, @authed_user_token_type, @bot_user_id, @enterprise_id, @enterprise_name, @error, @expires_in, @incoming_webhook_channel, @incoming_webhook_channel_id, @incoming_webhook_configuration_url, @incoming_webhook_url, @is_enterprise_install, @metadata_cursor, @metadata_messages, @metadata_warnings, @ok, @refresh_token, @scope, @team_id, @team_name, @token_type);
+

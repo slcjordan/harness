@@ -1,0 +1,12 @@
+version: 2
+sql:
+  - engine: "postgresql"
+    schema: "schema.sql"
+    queries: "."
+    gen:
+      go:
+        package: "sqlc"
+        sql_package: "pgx/v5"
+        sql_driver: "github.com/jackc/pgx/v5"
+        out: "."
+        emit_prepared_queries: true

@@ -1,4 +1,4 @@
-baseURL = 'http://localhost:1984/app'
+baseURL = 'http://localhost:53443/app'
 title = 'Unified Platform Tools'
 theme = 'terminal'
 

@@ -1,7 +1,6 @@
 
 FROM golang:1.24 AS builder
 ARG PORTAL_VERSION
-# ARG PROTODEF_VERSION
 
 ENV GOPRIVATE=source.vivint.com
 
@@ -32,6 +31,8 @@ RUN --mount=type=secret,id=netrc,target=/root/.netrc \
 
 FROM ubuntu:24.04
 
+RUN apt-get update && apt-get install -y ca-certificates
+
 COPY --from=builder /tmp/portal_test.key /tmp/portal_test.key
 # COPY --from=builder /tmp/combined.protoset /tmp/combined.protoset
 COPY --from=builder /go/bin/portal-tester /usr/local/bin/portal-tester
@@ -40,7 +41,5 @@ COPY --from=builder /usr/local/bin/harness /usr/local/bin/harness
 COPY ./ui/public /srv/harness
 
 ENV HARNESS_HTTPSERVER_FILEROOT=/srv/harness
-ENV HARNESS_HTTPSERVER_ADDR=:1984
-EXPOSE 1984
 
 CMD harness
