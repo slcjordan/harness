@@ -180,3 +180,44 @@ func WithPostgresDSNFlag(c *Command) {
 		},
 	)
 }
+
+func WithWorkflowFlags(c *Command) {
+	WithWorkflowServerFlag(c)
+	WithWorkflowQueueNameFlag(c)
+}
+
+func WithWorkflowServerFlag(c *Command) {
+	c.cmd.Flags = append(
+		c.cmd.Flags,
+		&cli.StringFlag{
+			Name:        "workflow-server",
+			EnvVars:     []string{EnvPrefix + "WORKFLOW_SERVER"},
+			Destination: &config.Workflow.Server,
+			Value:       config.Workflow.Server,
+		},
+	)
+}
+
+func WithWorkflowQueueNameFlag(c *Command) {
+	c.cmd.Flags = append(
+		c.cmd.Flags,
+		&cli.StringFlag{
+			Name:        "workflow-queue-name",
+			EnvVars:     []string{EnvPrefix + "WORKFLOW_QUEUE_NAME"},
+			Destination: &config.Workflow.QueueName,
+			Value:       config.Workflow.QueueName,
+		},
+	)
+}
+
+func WithGitlabTokenFlag(c *Command) {
+	c.cmd.Flags = append(
+		c.cmd.Flags,
+		&cli.StringFlag{
+			Name:        "gitlab-token",
+			EnvVars:     []string{EnvPrefix + "GITLAB_TOKEN"},
+			Destination: &config.Gitlab.Token,
+			Value:       config.Gitlab.Token,
+		},
+	)
+}

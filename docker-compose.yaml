@@ -32,17 +32,35 @@ services:
       - backend
     depends_on:
       - workflow-server
+    environment:
+      HARNESS_GITLAB_TOKEN: ${HARNESS_GITLAB_TOKEN}
+      HARNESS_POSTGRES_DSN: postgresql://${PGUSER}:${PGPASSWORD}@postgres:${PGPORT}/${PGDATABASE}?sslmode=disable
+      HARNESS_SLACK_CLIENT_ID: ${HARNESS_SLACK_CLIENT_ID}
+      HARNESS_SLACK_CLIENT_SECRET: ${HARNESS_SLACK_CLIENT_SECRET}
+      HARNESS_SLACK_REDIRECT_URL: https://localhost:${PORT}/slack/oauth/callback
+  workflow-ui:
+    image: temporalio/ui:2.39.0
+    depends_on:
+      - workflow-server
+    ports:
+      - "0:8080"
+    environment:
+      TEMPORAL_ADDRESS: "workflow-server:7233"
+      TEMPORAL_CORS_ORIGINS: "http://localhost:8080"
+    networks:
+      - backend
   workflow-server:
     image: temporalio/auto-setup:${TEMPORALIO_VERSION}
     depends_on:
       - postgres
     environment:
       DB: postgres12
-      DBNAME: ${TEMPORALIO_DB}
       DB_PORT: ${PGPORT}
       POSTGRES_SEEDS: postgres
       POSTGRES_USER: ${PGUSER}
       POSTGRES_PWD: ${PGPASSWORD}
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
     networks:
       - backend
     ports:
@@ -65,6 +83,43 @@ services:
       retries: 5
     volumes:
       - pgdata:/var/lib/postgresql/data
+  psql:
+    image: postgres:${POSTGRES_VERSION}
+    profiles:
+      - jobs
+    environment:
+      PGHOST: postgres
+      PGPORT: ${PGPORT}
+      PGPASSWORD: ${PGPASSWORD}
+      PGUSER: ${PGUSER}
+      PGDATABASE: ${PGDATABASE}
+    networks:
+      - backend
+    command:
+      - "psql"
+      - "--pset"
+      - "expanded=auto"
+      - "-f"
+      - "-"
+  schema-dump:
+    image: postgres:${POSTGRES_VERSION}
+    profiles:
+      - jobs
+    environment:
+      PGHOST: postgres
+      PGPORT: ${PGPORT}
+      PGPASSWORD: ${PGPASSWORD}
+      PGUSER: ${PGUSER}
+      PGDATABASE: ${PGDATABASE}
+    networks:
+      - backend
+    command:
+      - "pg_dump"
+      - "--file"
+      - "db/sqlc/schema.sql"
+      - "--schema-only"
+    volumes:
+      - ./db:/db
   migrate:
     profiles:
       - jobs

@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type GitlabUserCache struct {
+	GitlabUserID int32
+	Email        string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+}
+
 type SchemaMigration struct {
 	Version int64
 	Dirty   bool

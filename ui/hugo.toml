@@ -1,4 +1,5 @@
-baseURL = 'http://localhost:53443/app'
+# baseURL = 'http://localhost:53443/app'
+baseURL = '/app'
 title = 'Unified Platform Tools'
 theme = 'terminal'
 
@@ -101,6 +102,6 @@ pagination.pagerSize = 5
           name = "Portal"
           url = "/pages/portal-tester"
         [[languages.en.menu.main]]
-          identifier = "showcase"
-          name = "Showcase"
-          url = "/app/showcase"
+          identifier = "workflow"
+          name = "Workflow"
+          url = "/pages/workflow-trigger"

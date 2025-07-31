@@ -75,12 +75,10 @@ type PingEcho struct {
 func (p *PingEcho) Handle(ctx context.Context, email string) (struct{}, error) {
 	user, err := p.Client.GetUserByEmailContext(ctx, email)
 	if err != nil {
-		fmt.Println("A")
 		return struct{}{}, err
 	}
 	token, err := p.GetUserToken.Handle(ctx, user.ID)
 	if err != nil {
-		fmt.Println("B")
 		return struct{}{}, err
 	}
 	userClient := slack.New(token)
@@ -89,9 +87,42 @@ func (p *PingEcho) Handle(ctx context.Context, email string) (struct{}, error) {
 		Users:    []string{user.ID},
 	})
 	if err != nil {
-		fmt.Println("C")
 		return struct{}{}, err
 	}
 	_, _, err = userClient.PostMessage(channel.ID, slack.MsgOptionText("Hello from "+email, false))
+	return struct{}{}, err
+}
+
+type UserMessages struct {
+	Client       *slack.Client
+	SenderEmail  string
+	GetUserToken harness.Handler[string, string]
+}
+
+func (u *UserMessages) Handle(ctx context.Context, msgs []harness.UserMessage) (struct{}, error) {
+	user, err := u.Client.GetUserByEmailContext(ctx, u.SenderEmail)
+	if err != nil {
+		return struct{}{}, err
+	}
+	token, err := u.GetUserToken.Handle(ctx, user.ID)
+	if err != nil {
+		return struct{}{}, err
+	}
+	userClient := slack.New(token)
+
+	for _, msg := range msgs {
+		dest, err := u.Client.GetUserByEmailContext(ctx, msg.Email)
+		if err != nil {
+			return struct{}{}, err
+		}
+		channel, _, _, err := userClient.OpenConversationContext(ctx, &slack.OpenConversationParameters{
+			ReturnIM: true,
+			Users:    []string{dest.ID},
+		})
+		if err != nil {
+			return struct{}{}, err
+		}
+		_, _, err = userClient.PostMessage(channel.ID, slack.MsgOptionText(msg.Message, false))
+	}
 	return struct{}{}, err
 }

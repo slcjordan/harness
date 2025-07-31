@@ -1,0 +1,12 @@
+
+<div class="mb-2" x-data="{ response: '' }">
+  <button @click="
+    fetch('{{ .Get "endpoint" }}')
+		.then(res => res.text())
+		.then(data => response = data)
+	  " class="bg-green-500 text-white px-4 py-1 mt-1 rounded">{{ .Get "text" }}</button>
+
+   <div x-text="response"></div>
+</div>
+
+

@@ -22,4 +22,9 @@ var Postgres struct {
 
 var Workflow struct {
 	QueueName string
+	Server    string
+}
+
+var Gitlab struct {
+	Token string
 }

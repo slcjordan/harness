@@ -18,7 +18,9 @@ import (
 	"github.com/slcjordan/harness/logger"
 	"github.com/slcjordan/harness/pki"
 	"github.com/slcjordan/harness/slack"
+	"github.com/slcjordan/harness/workflow"
 	"github.com/slcjordan/harness/ws"
+	"go.temporal.io/sdk/client"
 )
 
 func mustLoadTLSConfig() (*http.Client, *tls.Config) {
@@ -49,6 +51,8 @@ func main() {
 	logger.Init()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	config.Workflow.Server = "workflow-server:7233"
+	config.Workflow.QueueName = "harness-worker"
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -63,13 +67,14 @@ func main() {
 		Listener: enc,
 	}
 	enc.Listener = ws
-	client, tlsConfig := mustLoadTLSConfig()
+	tlsClient, tlsConfig := mustLoadTLSConfig()
 	slackOAuth := &slack.OAuthHandler{
-		Client: client,
+		Client: tlsClient,
 	}
 
 	c := cli.NewCommand("serve", "run http server", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
-		pool := db.Connect()
+		pool := db.Connect(ctx)
+		defer pool.Close()
 		saveSlackOAuthResponse := &db.SaveSlackOAuthResponse{
 			Pool: pool,
 		}
@@ -81,20 +86,17 @@ func main() {
 		if err != nil {
 			return err
 		}
-		botAccessToken, err := (&db.GetBotAccessToken{
-			Pool: pool,
-		}).Handle(ctx, struct{}{})
+
+		temporalClient, err := client.Dial(client.Options{
+			HostPort:  config.Workflow.Server,
+			Namespace: "default",
+		})
 		if err != nil {
 			return err
 		}
-		_, err = (&slack.PingEcho{
-			Client: slack.New(botAccessToken),
-			GetUserToken: &db.GetUserTokenByClientID{
-				Pool: pool,
-			},
-		}).Handle(ctx, "jordan.crabtree@vivint.com")
-		if err != nil {
-			return err
+		workflowStart := &workflow.Start{
+			Client:    temporalClient,
+			QueueName: config.Workflow.QueueName,
 		}
 
 		fs := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -103,14 +105,15 @@ func main() {
 		r.Handle("/app/*", http.StripPrefix("/app/", fs))
 		r.Handle("/app/ws/*", http.StripPrefix("/app/ws/", ws))
 		r.Handle("/slack/oauth/callback", slackOAuth)
+		r.Handle("/start", workflowStart)
 		server := http.Server{
 			Addr:    config.HTTPServer.Addr,
 			Handler: r,
 		}
 		server.TLSConfig = tlsConfig
 		logger.Infof(ctx, "listening at %q", config.HTTPServer.Addr)
-		return server.ListenAndServeTLS("", "")
-	}), cli.WithHTTPServerFlags, cli.WithSlackFlags, cli.WithPostgresDSNFlag)
+		return http.ListenAndServe(config.HTTPServer.Addr, r)
+	}), cli.WithHTTPServerFlags, cli.WithSlackFlags, cli.WithPostgresDSNFlag, cli.WithWorkflowFlags)
 
 	err := c.Run(ctx, os.Args)
 	if err != nil {

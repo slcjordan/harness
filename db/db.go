@@ -9,8 +9,8 @@ import (
 	"github.com/slcjordan/harness/db/sqlc"
 )
 
-func Connect() *pgxpool.Pool {
-	pool, err := pgxpool.New(context.TODO(), config.Postgres.DSN)
+func Connect(ctx context.Context) *pgxpool.Pool {
+	pool, err := pgxpool.New(ctx, config.Postgres.DSN)
 	if err != nil {
 		panic(err)
 	}
@@ -86,4 +86,32 @@ type GetUserTokenByClientID struct {
 func (b *GetUserTokenByClientID) Handle(ctx context.Context, clientID string) (string, error) {
 	queries := sqlc.New(b.Pool)
 	return queries.GetUserTokenByClientID(ctx, clientID)
+}
+
+type GetGitlabUser struct {
+	Pool *pgxpool.Pool
+}
+
+func (g *GetGitlabUser) Handle(ctx context.Context, gitlabUserID int32) (harness.GitlabUser, error) {
+	queries := sqlc.New(g.Pool)
+	email, err := queries.GetGitlabUser(ctx, gitlabUserID)
+	if err != nil {
+		return harness.GitlabUser{}, err
+	}
+	return harness.GitlabUser{
+		ID:    gitlabUserID,
+		Email: email,
+	}, nil
+}
+
+type UpsertGitlabUser struct {
+	Pool *pgxpool.Pool
+}
+
+func (u *UpsertGitlabUser) Handle(ctx context.Context, gitlabUser harness.GitlabUser) (struct{}, error) {
+	queries := sqlc.New(u.Pool)
+	return struct{}{}, queries.UpsertGitlabUser(ctx, sqlc.UpsertGitlabUserParams{
+		GitlabUserID: gitlabUser.ID,
+		Email:        gitlabUser.Email,
+	})
 }

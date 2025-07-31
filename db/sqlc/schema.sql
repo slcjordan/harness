@@ -21,6 +21,20 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: gitlab_user_cache; Type: TABLE; Schema: public; Owner: user
+--
+
+CREATE TABLE public.gitlab_user_cache (
+    gitlab_user_id integer NOT NULL,
+    email text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.gitlab_user_cache OWNER TO "user";
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: user
 --
 
@@ -71,11 +85,11 @@ CREATE TABLE public.slack_oauth_response (
 ALTER TABLE public.slack_oauth_response OWNER TO "user";
 
 --
--- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: user
+-- Name: gitlab_user_cache gitlab_user_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: user
 --
 
-ALTER TABLE ONLY public.schema_migrations
-    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+ALTER TABLE ONLY public.gitlab_user_cache
+    ADD CONSTRAINT gitlab_user_cache_pkey PRIMARY KEY (gitlab_user_id);
 
 
 --

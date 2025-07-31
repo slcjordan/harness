@@ -32,6 +32,8 @@ TEMPORALIO_HOST?=${DEV_NAMESPACE}-temporalio
 TEMPORALIO_DB?=temporalio
 DUMP_FILENAME?=dump.sql
 HARNESS_PORT?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port harness ${PORT})
+WORKFLOW_SERVER_PORT?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port workflow-ui 8080)
+POSTGRES_CONTAINER_ID?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port -q postgres)
 
 
 .PHONY: start-all
@@ -39,15 +41,27 @@ start-all: hugo-build
 	DOCKER_BUILDKIT=1 docker-compose \
 		--project-name ${DEV_NAMESPACE} \
 		up \
+			--build \
 			--detach
+
+.PHONY: down-all
+down-all: hugo-build
+	docker-compose \
+		--project-name ${DEV_NAMESPACE} \
+		down \
+			--remove-orphans
 
 .PHONY: debug
 debug:
-	echo ${NETWORK}
+	echo ${POSTGRES_CONTAINER_ID}
 
 .PHONY: open-harness
 open-harness:
 	${OPEN_BROWSER} ${HARNESS_PORT}/app/pages/portal-tester/
+
+.PHONY: open-workflow
+open-workflow:
+	${OPEN_BROWSER} ${WORKFLOW_SERVER_PORT}
 
 .PHONY: hugo-build
 hugo-build:
@@ -60,7 +74,7 @@ hugo-build:
 			hugo --source /ui
 
 .PHONY: temporalio-start
-temporalio-start: postgres-wait
+temporalio-start: wait-postgres
 	docker run \
 		--detach \
 		--tty \
@@ -103,7 +117,7 @@ go-sqlc: postgres-schema-dump ## Generate go code from sqlc.
 	chmod 440 db/sqlc/db.go
 
 .PHONY: postgres-dump
-postgres-dump: postgres-wait
+postgres-dump: wait-postgres
 	docker run \
 		--interactive \
 		--tty \
@@ -119,21 +133,27 @@ postgres-dump: postgres-wait
 			--file ${DUMP_FILENAME} \
 			${PGDATABASE} 
 
+# .PHONY: psql
+# psql: wait-postgres ## Start an interactive postgres shell
+# 	docker run \
+# 		--name ${PGHOST}-psql \
+# 		--interactive \
+# 		--tty \
+# 		--rm \
+# 		--network '${NETWORK}' \
+# 		postgres:${POSTGRES_VERSION} psql \
+# 			-d ${DB_CONN_STRING} \
+# 			--pset expanded=auto \
+# 			-f -
+
 .PHONY: psql
-psql: postgres-wait ## Start an interactive postgres shell
-	docker run \
-		--name ${PGHOST}-psql \
-		--interactive \
-		--tty \
-		--rm \
-		--network '${NETWORK}' \
-		postgres:${POSTGRES_VERSION} psql \
-			-d ${DB_CONN_STRING} \
-			--pset expanded=auto \
-			-f -
+psql: ## Start an interactive postgres shell
+	docker-compose \
+		--project-name ${DEV_NAMESPACE} \
+		run psql
 
 .PHONY: pgadmin
-pgadmin: postgres-wait ## Start pgadmin and open in browser window
+pgadmin: wait-postgres ## Start pgadmin and open in browser window
 	-mkdir -p /tmp/.cache/${DEV_NAMESPACE}/pgadmin/state
 	-echo ' { "Servers": { "1": { "Name": "${DEV_NAMESPACE}", "Group": "Servers", "Host": "${PGHOST}", "Port": ${PGPORT}, "Username": "${PGUSER}", "SSLMode": "prefer", "MaintenanceDB": "${PGDATABASE}", "PassFile": "/pgpass" } } } ' > /tmp/.cache/${DEV_NAMESPACE}/pgadmin/servers.json
 	-echo '${PGHOST}:${PGPORT}:${PGDATABASE}:${PGUSER}:${PGPASSWORD}' > /tmp/.cache/${DEV_NAMESPACE}/pgadmin/pgpass
@@ -165,16 +185,13 @@ pgadmin: postgres-wait ## Start pgadmin and open in browser window
 pgadmin-stop: ## Stop running pgadmin instance
 	docker stop ${PGHOST}-pgadmin
 
-.PHONY: postgres-wait
-postgres-wait: start-all ## Start postgres if it isn't started and wait for it to be ready.
-	until docker run \
-		--name ${PGHOST}-wait \
-		--rm \
-		--network '${NETWORK}' \
-		postgres:${POSTGRES_VERSION} psql -d ${DB_CONN_STRING} -c 'SELECT 1'; \
-	do \
-			sleep 3; \
-	done
+.PHONY: wait-postgres
+wait-postgres: start-all ## Start postgres if it isn't started and wait for it to be ready.
+	@until [ "$$(docker inspect -f '{{.State.Health.Status}}' ${POSTGRES_CONTAINER_ID})" = "healthy" ]; do \
+		echo "Waiting for db to become healthy..."; \
+		sleep 1; \
+	done; \
+
 
 .PHONY: postgres-migrate-create
 postgres-migrate-create: ## Helps the user create a pair of up/down migration script files and prompts them for a descriptive filename.
@@ -200,7 +217,7 @@ postgres-migrate: ## Run all migrations up to the latest version.
 		run migrate
 
 .PHONY: postgres-migrate-version
-postgres-migrate-version: postgres-wait ## Print the currently applied migration version.
+postgres-migrate-version: wait-postgres ## Print the currently applied migration version.
 	docker run \
 		--interactive \
 		--tty \
@@ -214,7 +231,7 @@ postgres-migrate-version: postgres-wait ## Print the currently applied migration
 			version
 
 .PHONY: postgres-migrate-force
-postgres-migrate-force: postgres-wait ## Force the migration to a specific version. This is useful in case of a failed migration.
+postgres-migrate-force: wait-postgres ## Force the migration to a specific version. This is useful in case of a failed migration.
 	docker run \
 		--interactive \
 		--tty \
@@ -229,21 +246,8 @@ postgres-migrate-force: postgres-wait ## Force the migration to a specific versi
 
 .PHONY: postgres-schema-dump
 postgres-schema-dump: postgres-migrate ## create postgres schema dump file under db/sqlc, which is necessary for sqlc
-	docker run \
-		--interactive \
-		--tty \
-		--rm \
-		--name ${PGHOST}-pgschema-dump \
-		--network '${NETWORK}' \
-		--env PGDATABASE=${PGDATABASE} \
-		--env PGHOST=${PGHOST} \
-		--env PGPASSWORD=${PGPASSWORD} \
-		--env PGPORT=${PGPORT} \
-		--env PGUSER=${PGUSER} \
-		--volume ${PWD}/db:/db \
-		--workdir / \
-		postgres:${POSTGRES_VERSION} pg_dump \
-			--file db/sqlc/schema.sql \
-			--schema-only
+	docker-compose \
+		--project-name ${DEV_NAMESPACE} \
+		run schema-dump
 	sudo chown $(shell id -u):$(shell id -g) db/sqlc/schema.sql
 	chmod 440 db/sqlc/schema.sql

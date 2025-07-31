@@ -10,6 +10,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+type Valuer interface {
+	Value(key any) any
+}
+
 func Init() {
 	cfg := zap.NewProductionEncoderConfig()
 	cfg.EncodeTime = zapcore.RFC3339TimeEncoder
@@ -35,7 +39,7 @@ type contextValue struct {
 	Fields []zap.Field
 }
 
-func getContext(ctx context.Context) contextValue {
+func getContext(ctx Valuer) contextValue {
 	val, ok := ctx.Value(contextKey{}).(contextValue)
 	if !ok {
 		return contextValue{}
@@ -44,6 +48,10 @@ func getContext(ctx context.Context) contextValue {
 }
 
 func With(ctx context.Context, key string, raw any) context.Context {
+	return WithGeneric(context.WithValue, ctx, key, raw)
+}
+
+func WithGeneric[V Valuer](f func(V, any, any) V, ctx V, key string, raw any) V {
 	v := getContext(ctx)
 	switch val := raw.(type) {
 	case zapcore.ArrayMarshaler:
@@ -175,13 +183,13 @@ func With(ctx context.Context, key string, raw any) context.Context {
 	default:
 		v.Fields = append(v.Fields, zap.Any(key, val))
 	}
-	return context.WithValue(ctx, contextKey{}, v)
+	return f(ctx, contextKey{}, v)
 }
 
-func Infof(ctx context.Context, f string, a ...any) {
+func Infof(ctx Valuer, f string, a ...any) {
 	logger.Info(fmt.Sprintf(f, a...), getContext(ctx).Fields...)
 }
 
-func Errorf(ctx context.Context, f string, a ...any) {
+func Errorf(ctx Valuer, f string, a ...any) {
 	logger.Error(fmt.Sprintf(f, a...), getContext(ctx).Fields...)
 }
