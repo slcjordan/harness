@@ -45,8 +45,10 @@ func NewCommand(name string, usage string, runner Runner, options ...Option) *Co
 	return result
 }
 
-func (c *Command) Subcommand(name string, usage string, runner Runner, options ...Option) {
-	c.cmd.Subcommands = append(c.cmd.Subcommands, NewCommand(name, usage, runner, options...).cmd)
+func (c *Command) Subcommand(name string, usage string, runner Runner, options ...Option) *Command {
+	result := NewCommand(name, usage, runner, options...)
+	c.cmd.Subcommands = append(c.cmd.Subcommands, result.cmd)
+	return result
 }
 
 func (c *Command) Run(ctx context.Context, args []string) error {

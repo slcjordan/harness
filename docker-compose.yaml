@@ -28,6 +28,9 @@ services:
       dockerfile: docker/worker
       secrets:
         - netrc
+        - testkey
+      args:
+        PORTAL_VERSION: ${PORTAL_VERSION}
     networks:
       - backend
     depends_on:
@@ -38,6 +41,8 @@ services:
       HARNESS_SLACK_CLIENT_ID: ${HARNESS_SLACK_CLIENT_ID}
       HARNESS_SLACK_CLIENT_SECRET: ${HARNESS_SLACK_CLIENT_SECRET}
       HARNESS_SLACK_REDIRECT_URL: https://localhost:${PORT}/slack/oauth/callback
+    volumes:
+      - /home/jcrabtree/.kube:/home/jcrabtree/.kube
   workflow-ui:
     image: temporalio/ui:2.39.0
     depends_on:
@@ -148,3 +153,5 @@ volumes:
 secrets:
   netrc:
     file: /home/jcrabtree/.netrc
+  testkey:
+    file: /home/jcrabtree/Developer/src/gitlab.com/vivint/horizontals/platform/portal/auth/camera_jwt/test_key.go

@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/rand/v2"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/slcjordan/harness"
 	"github.com/slcjordan/harness/logger"
@@ -28,14 +28,14 @@ func userIDs(in []*gitlab.BasicUser) []int32 {
 	return result
 }
 
-var parseJiraRegexp = regexp.MustCompile("[a-z]+/([A-Z]+-[0-9]+)_.*")
+var parseJiraRegexp = regexp.MustCompile("^(Resolve )?([A-Z]+-[0-9]+) .*$")
 
 func parseJira(title string) string {
 	groups := parseJiraRegexp.FindStringSubmatch(title)
-	if len(groups) < 2 {
+	if len(groups) < 3 {
 		return ""
 	}
-	return groups[1]
+	return groups[2]
 }
 
 func mergeRequest(in gitlab.BasicMergeRequest) harness.MergeRequest {
@@ -138,6 +138,17 @@ type UserMessages struct {
 	CacheSave  harness.Handler[harness.GitlabUser, struct{}]
 }
 
+func (u *UserMessages) problems(ctx context.Context, curr harness.MergeRequest) []string {
+	var result []string
+	if !curr.BlockingDiscussionsResolved || curr.HasConflicts {
+		result = append(result, "has unresolved comments/conflicts")
+	}
+	if len(curr.Reviewers) < 2 {
+		result = append(result, "needs 2 or more reviewers")
+	}
+	return result
+}
+
 func (u *UserMessages) Handle(ctx context.Context, mrs []harness.MergeRequest) ([]harness.UserMessage, error) {
 	msgs := make(map[int32]*bytes.Buffer)
 	unresolved := make(map[string]bool)
@@ -151,13 +162,14 @@ func (u *UserMessages) Handle(ctx context.Context, mrs []harness.MergeRequest) (
 			w = bytes.NewBuffer(nil)
 			msgs[curr.Author] = w
 		}
-		if !curr.BlockingDiscussionsResolved || curr.HasConflicts {
+		problems := u.problems(ctx, curr)
+		if len(problems) > 0 {
 			if !unresolved[curr.Jira] {
 				unresolved[curr.Jira] = true
-				fmt.Fprintf(w, "\n%s\n---\n\n", curr.Jira)
+				fmt.Fprintf(w, "\n*%s*\n\n", curr.Jira)
 			}
 			name, _ := u.projectName(curr.ProjectID)
-			fmt.Fprintf(w, "[%s](%s) has unresolved comments or merge conflicts\n", name, curr.WebURL)
+			fmt.Fprintf(w, "<%s|%s> %s.\n", curr.WebURL, name, strings.Join(problems, " and "))
 		}
 	}
 
@@ -188,17 +200,20 @@ func (u *UserMessages) getEmail(ctx context.Context, userID int32) (string, erro
 	if err != nil {
 		return "", err
 	}
-	if len(userMRList) == 0 {
-		return "", fmt.Errorf("could not find any mrs for %d", userID)
+
+	var commits []*gitlab.Commit
+	for len(commits) == 0 {
+		if len(userMRList) == 0 {
+			return "", fmt.Errorf("could not find any mrs for %d", userID)
+		}
+		first := userMRList[0]
+		commits, _, err = u.Client.MergeRequests.GetMergeRequestCommits(first.ProjectID, first.IID, nil)
+		if err != nil {
+			return "", err
+		}
+		userMRList = userMRList[1:]
 	}
-	rand.Shuffle(len(userMRList), func(i, j int) {
-		userMRList[i], userMRList[j] = userMRList[j], userMRList[i]
-	})
-	first := userMRList[0]
-	commits, _, err := u.Client.MergeRequests.GetMergeRequestCommits(first.ProjectID, first.IID, nil)
-	if len(commits) == 0 {
-		return "", fmt.Errorf("could not find any commits for %d", userID)
-	}
+
 	user = harness.GitlabUser{
 		ID:    userID,
 		Email: deref(commits[0]).AuthorEmail,

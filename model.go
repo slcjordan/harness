@@ -1,6 +1,8 @@
 package harness
 
-import "time"
+import (
+	"time"
+)
 
 type Stream uint8
 
@@ -111,4 +113,14 @@ type UserMessage struct {
 type GitlabUser struct {
 	Email string
 	ID    int32
+}
+
+type NamespacedObject struct {
+	Namespace string
+	ID        string
+}
+
+type Camera struct {
+	UUID      string
+	PanelHWID string
 }

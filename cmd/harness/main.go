@@ -10,6 +10,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/slcjordan/harness"
 	"github.com/slcjordan/harness/cli"
 	"github.com/slcjordan/harness/config"
 	"github.com/slcjordan/harness/db"
@@ -58,7 +59,8 @@ func main() {
 	r.Use(middleware.Logger)
 
 	enc := &json.InteractiveCommandEncoder{}
-	daemon := exec.StartInteractive(ctx, enc, "portal-tester", "-portalHost", "portal", "-cameraJWT", "", "-uuid", "a6911eb4-c4be-4986-adec-584e9ae47a66", "-run", "sendDetectionEvents", "-input-file", "/dev/stdin")
+	// daemon := exec.StartInteractive(ctx, enc, "portal-tester", "-portalHost", "portal", "-cameraJWT", "", "-uuid", "a6911eb4-c4be-4986-adec-584e9ae47a66", "-run", "sendDetectionEvents", "-input-file", "/dev/stdin")
+	daemon := exec.StartInteractive(ctx, enc, "cat")
 	enc.Command = daemon
 	ws := &ws.Server{
 		Conns:    make(map[string]*websocket.Conn),
@@ -94,9 +96,38 @@ func main() {
 		if err != nil {
 			return err
 		}
-		workflowStart := &workflow.Start{
+		gitStart := &workflow.Start{
 			Client:    temporalClient,
 			QueueName: config.Workflow.QueueName,
+			Initial:   "",
+			Workflow:  "slack-mrs",
+		}
+		k8sWait := &workflow.Wait[[]string]{
+			Client:    temporalClient,
+			QueueName: config.Workflow.QueueName,
+			Initial:   []string{"smoke", "jcrabtree"},
+			Workflow:  "k8s-envs",
+		}
+		k8sListWait := &workflow.Wait[[]harness.NamespacedObject]{
+			Client:    temporalClient,
+			QueueName: config.Workflow.QueueName,
+			Initial:   []string{"smoke", "jcrabtree"},
+			Workflow:  "k8s-list",
+		}
+		jwtWait := &workflow.Wait[string]{
+			Client:    temporalClient,
+			QueueName: config.Workflow.QueueName,
+			Initial: harness.Camera{
+				UUID:      "676959d4-f291-44e4-b6c0-377299238597",
+				PanelHWID: "HW4-17068E84BD4",
+			},
+			Workflow: "jwt",
+		}
+		portForwardWait := &workflow.Wait[[]harness.MergeRequest]{
+			Client:    temporalClient,
+			QueueName: config.Workflow.QueueName,
+			Initial:   "",
+			Workflow:  "port-forward",
 		}
 
 		fs := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +136,11 @@ func main() {
 		r.Handle("/app/*", http.StripPrefix("/app/", fs))
 		r.Handle("/app/ws/*", http.StripPrefix("/app/ws/", ws))
 		r.Handle("/slack/oauth/callback", slackOAuth)
-		r.Handle("/start", workflowStart)
+		r.Handle("/git", gitStart)
+		r.Handle("/k8s", k8sWait)
+		r.Handle("/k8s-list", k8sListWait)
+		r.Handle("/jwt", jwtWait)
+		r.Handle("/port-forward", portForwardWait)
 		server := http.Server{
 			Addr:    config.HTTPServer.Addr,
 			Handler: r,

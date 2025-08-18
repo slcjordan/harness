@@ -40,6 +40,7 @@ POSTGRES_CONTAINER_ID?=$(shell docker-compose --project-name ${DEV_NAMESPACE} po
 start-all: hugo-build
 	DOCKER_BUILDKIT=1 docker-compose \
 		--project-name ${DEV_NAMESPACE} \
+		--progress plain \
 		up \
 			--build \
 			--detach

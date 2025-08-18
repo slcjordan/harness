@@ -4,6 +4,9 @@ draft = false
 title = 'Workflow Trigger'
 +++
 
-{{<tool-desc name="Workflow Trigger">}}
+{{<tool-desc name="Workflow Triggers">}}
 
-{{<fetch-button endpoint="/start" text="Start Workflow">}}
+{{<fetch-button endpoint="/git" text="Git Activity Workflow">}}
+{{<fetch-button endpoint="/k8s-list" text="K8s Diff Workflow">}}
+{{<fetch-button endpoint="/jwt" text="Generate JWT Workflow">}}
+{{<fetch-button endpoint="/port-forward" text="Port-Forward Portal">}}

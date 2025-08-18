@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 var HTTPServer struct {
 	Addr     string
 	FileRoot string
@@ -21,8 +23,9 @@ var Postgres struct {
 }
 
 var Workflow struct {
-	QueueName string
-	Server    string
+	QueueName       string
+	Server          string
+	ActivityTimeout time.Duration
 }
 
 var Gitlab struct {
