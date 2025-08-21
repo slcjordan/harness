@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+type Contract[A, B any] struct {
+	Queue string
+	Name  string
+}
+
 type Stream uint8
 
 const (

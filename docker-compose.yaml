@@ -1,8 +1,8 @@
 services:
-  harness:
+  harness-ui:
     build:
       context: .
-      dockerfile: docker/harness
+      dockerfile: docker/ui
       secrets:
         - netrc
       args:
@@ -10,25 +10,21 @@ services:
     depends_on:
       - postgres
     ports:
-      - "0:${PORT}"
+      - "${UI_PORT}:${PORT}"
     environment:
       HARNESS_HTTPSERVER_ADDR: :${PORT}
       HARNESS_HTTPSERVER_KEYROOT: /var/harness/pki
-      HARNESS_SLACK_CLIENT_ID: ${HARNESS_SLACK_CLIENT_ID}
-      HARNESS_SLACK_CLIENT_SECRET: ${HARNESS_SLACK_CLIENT_SECRET}
-      HARNESS_SLACK_REDIRECT_URL: https://localhost:${PORT}/slack/oauth/callback
       HARNESS_POSTGRES_DSN: postgresql://${PGUSER}:${PGPASSWORD}@postgres:${PGPORT}/${PGDATABASE}?sslmode=disable
     volumes:
       - pki:/var/harness/pki
     networks:
       - backend
-  workflow-worker:
+  harness-activity:
     build:
       context: .
-      dockerfile: docker/worker
+      dockerfile: docker/activity
       secrets:
         - netrc
-        - testkey
       args:
         PORTAL_VERSION: ${PORTAL_VERSION}
     networks:
@@ -43,12 +39,24 @@ services:
       HARNESS_SLACK_REDIRECT_URL: https://localhost:${PORT}/slack/oauth/callback
     volumes:
       - /home/jcrabtree/.kube:/home/jcrabtree/.kube
+  harness-workflow:
+    build:
+      context: .
+      dockerfile: docker/workflow
+      args:
+        PORTAL_VERSION: ${PORTAL_VERSION}
+    networks:
+      - backend
+    depends_on:
+      - workflow-server
+    environment:
+      HARNESS_POSTGRES_DSN: postgresql://${PGUSER}:${PGPASSWORD}@postgres:${PGPORT}/${PGDATABASE}?sslmode=disable
   workflow-ui:
     image: temporalio/ui:2.39.0
     depends_on:
       - workflow-server
     ports:
-      - "0:8080"
+      - "${TEMPORALIO_UI_PORT}:8080"
     environment:
       TEMPORAL_ADDRESS: "workflow-server:7233"
       TEMPORAL_CORS_ORIGINS: "http://localhost:8080"
@@ -69,8 +77,8 @@ services:
     networks:
       - backend
     ports:
-      - "0:7233"
-      - "0:9090"
+      - "${TEMPORALIO_GRPC_PORT}:7233"
+      - "${TEMPORALIO_PROMETHEUS_PORT}:9090"
   postgres:
     image: postgres:${POSTGRES_VERSION}
     environment:
@@ -81,7 +89,7 @@ services:
     networks:
       - backend
     ports:
-      - "0:5432"
+      - "${POSTGRES_PORT}:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
@@ -153,5 +161,3 @@ volumes:
 secrets:
   netrc:
     file: /home/jcrabtree/.netrc
-  testkey:
-    file: /home/jcrabtree/Developer/src/gitlab.com/vivint/horizontals/platform/portal/auth/camera_jwt/test_key.go

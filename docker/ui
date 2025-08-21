@@ -1,0 +1,28 @@
+
+FROM golang:1.24 AS builder
+ARG PORTAL_VERSION
+
+RUN apt-get update
+
+RUN mkdir -p /go/src/github.com/slcjordan/harness
+
+WORKDIR /go/src/github.com/slcjordan/harness
+
+COPY . .
+
+RUN --mount=type=secret,id=netrc,target=/root/.netrc \
+    --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    update-ca-certificates && go build -o /usr/local/bin/harness -tags "uicmd slackgroup gitlabgroup" ./cmd/harness
+
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y ca-certificates
+
+COPY --from=builder /usr/local/bin/harness /usr/local/bin/harness
+
+COPY ./ui/public /srv/harness
+
+ENV HARNESS_HTTPSERVER_FILEROOT=/srv/harness
+
+CMD harness ui

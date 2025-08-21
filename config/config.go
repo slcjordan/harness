@@ -23,6 +23,7 @@ var Postgres struct {
 }
 
 var Workflow struct {
+	Namespace       string
 	QueueName       string
 	Server          string
 	ActivityTimeout time.Duration

@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/slcjordan/harness/cli"
 	"github.com/slcjordan/harness/config"
@@ -11,13 +12,14 @@ import (
 	"go.temporal.io/sdk/worker"
 )
 
-var ActivityInit []func(worker.Worker) error
+var ActivityInit []func(context.Context, worker.Worker) error
 
 func init() {
 	config.Workflow.QueueName = "harness-worker"
 
 	cmd.Subcommand(
-		"run-activity-worker", "run temporal activity worker", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
+		"activity", "run temporal activity worker", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
+			fmt.Println("activity is running.")
 			workerClient, err := client.Dial(client.Options{
 				HostPort:  config.Workflow.Server,
 				Namespace: "default",
@@ -28,7 +30,7 @@ func init() {
 			defer workerClient.Close()
 			w := worker.New(workerClient, config.Workflow.QueueName, worker.Options{})
 			for _, f := range ActivityInit {
-				err = f(w)
+				err = f(ctx, w)
 				if err != nil {
 					return err
 				}

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 
@@ -12,6 +13,23 @@ import (
 )
 
 const EnvPrefix = "HARNESS_"
+
+// only appends if the flag names are unique
+func flagAppend(slice []cli.Flag, elems ...cli.Flag) []cli.Flag {
+	seen := make(map[string]bool)
+
+outer:
+	for _, e := range elems {
+		for _, name := range e.Names() {
+			if seen[name] {
+				continue outer
+			}
+			seen[name] = true
+		}
+		slice = append(slice, e)
+	}
+	return slice
+}
 
 type Runner interface {
 	Run(context.Context, []string) error
@@ -52,12 +70,17 @@ func (c *Command) Subcommand(name string, usage string, runner Runner, options .
 }
 
 func (c *Command) Run(ctx context.Context, args []string) error {
-	app := &cli.App{
-		Name:   c.cmd.Name,
-		Usage:  c.cmd.Usage,
-		Flags:  c.cmd.Flags,
-		Action: c.cmd.Action,
+	for _, s := range c.cmd.Subcommands {
+		fmt.Printf("%s -> %s\n", c.cmd.Name, s.Name)
 	}
+	app := &cli.App{
+		Name:     c.cmd.Name,
+		Usage:    c.cmd.Usage,
+		Flags:    c.cmd.Flags,
+		Action:   c.cmd.Action,
+		Commands: c.cmd.Subcommands,
+	}
+	fmt.Println("running", args)
 	return app.RunContext(ctx, args)
 }
 
@@ -68,7 +91,7 @@ func WithHTTPServerFlags(c *Command) {
 }
 
 func WithHTTPServerAddrFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "httpserver-addr",
@@ -85,7 +108,7 @@ func WithHTTPServerAddrFlag(c *Command) {
 }
 
 func WithHTTPServerFileRootFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "httpserver-fileroot",
@@ -107,7 +130,7 @@ func WithHTTPServerFileRootFlag(c *Command) {
 }
 
 func WithHTTPServerKeyRootFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "httpserver-keyroot",
@@ -135,7 +158,7 @@ func WithSlackFlags(c *Command) {
 }
 
 func WithSlackClientIDFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "slack-client-id",
@@ -148,7 +171,7 @@ func WithSlackClientIDFlag(c *Command) {
 }
 
 func WithSlackClientSecretFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "slack-client-secret",
@@ -160,7 +183,7 @@ func WithSlackClientSecretFlag(c *Command) {
 }
 
 func WithSlackRedirectURLFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "slack-redirect-url",
@@ -172,7 +195,7 @@ func WithSlackRedirectURLFlag(c *Command) {
 }
 
 func WithPostgresDSNFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "postgres-dsn",
@@ -189,7 +212,7 @@ func WithWorkflowFlags(c *Command) {
 }
 
 func WithWorkflowServerFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "workflow-server",
@@ -201,7 +224,7 @@ func WithWorkflowServerFlag(c *Command) {
 }
 
 func WithWorkflowQueueNameFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "workflow-queue-name",
@@ -213,7 +236,7 @@ func WithWorkflowQueueNameFlag(c *Command) {
 }
 
 func WithGitlabTokenFlag(c *Command) {
-	c.cmd.Flags = append(
+	c.cmd.Flags = flagAppend(
 		c.cmd.Flags,
 		&cli.StringFlag{
 			Name:        "gitlab-token",

@@ -14,7 +14,6 @@ PGUSER?=user
 POSTGRES_VERSION?=16.9
 PGDATABASE?=postgres
 DB_CONN_STRING?=postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=disable
-# OPEN_BROWSER?=open -a "Google Chrome"
 OPEN_BROWSER=google-chrome
 PGADMIN_DEFAULT_EMAIL?=admin@${PGHOST}.com
 PGADMIN_DEFAULT_PASSWORD?=${PGPASSWORD}
@@ -133,19 +132,6 @@ postgres-dump: wait-postgres
 		postgres:${POSTGRES_VERSION} pg_dump \
 			--file ${DUMP_FILENAME} \
 			${PGDATABASE} 
-
-# .PHONY: psql
-# psql: wait-postgres ## Start an interactive postgres shell
-# 	docker run \
-# 		--name ${PGHOST}-psql \
-# 		--interactive \
-# 		--tty \
-# 		--rm \
-# 		--network '${NETWORK}' \
-# 		postgres:${POSTGRES_VERSION} psql \
-# 			-d ${DB_CONN_STRING} \
-# 			--pset expanded=auto \
-# 			-f -
 
 .PHONY: psql
 psql: ## Start an interactive postgres shell

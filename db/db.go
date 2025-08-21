@@ -9,12 +9,19 @@ import (
 	"github.com/slcjordan/harness/db/sqlc"
 )
 
-func Connect(ctx context.Context) *pgxpool.Pool {
+var cache = make(map[string]*pgxpool.Pool)
+
+func Connect(ctx context.Context) (*pgxpool.Pool, error) {
+	pool, ok := cache[config.Postgres.DSN]
+	if ok {
+		return pool, nil
+	}
 	pool, err := pgxpool.New(ctx, config.Postgres.DSN)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return pool
+	cache[config.Postgres.DSN] = pool
+	return pool, nil
 }
 
 type SaveSlackOAuthResponse struct {
