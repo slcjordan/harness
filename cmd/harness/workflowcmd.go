@@ -47,6 +47,6 @@ func init() {
 				},
 			)
 
-			return nil
+			return w.Run(worker.InterruptCh())
 		}), WorkOptions...)
 }

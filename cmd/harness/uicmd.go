@@ -33,7 +33,8 @@ func init() {
 			r.Route("/workflow", func(subroute chi.Router) {
 				subroute.Post("/"+WorkflowGitlabNotifySlack.Name, JSONHandler(WorkflowGitlabNotifySlack, temporalClient))
 			})
-			return nil
+			logger.Infof(ctx, "serving at %q", config.HTTPServer.Addr)
+			return http.ListenAndServe(config.HTTPServer.Addr, r)
 		}), ServeOptions...)
 }
 

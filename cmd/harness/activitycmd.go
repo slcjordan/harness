@@ -33,6 +33,6 @@ func init() {
 					return err
 				}
 			}
-			return nil
+			return w.Run(worker.InterruptCh())
 		}), append(WorkOptions, cli.WithWorkflowFlags)...)
 }
