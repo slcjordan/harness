@@ -102,7 +102,6 @@ func (l *Lister) Handle(ctx context.Context, namespaces []string) ([]harness.Nam
 			result = append(result, harness.NamespacedObject{Namespace: "-" + ns, ID: name})
 		}
 	}
-	fmt.Println(result)
 	return result, nil
 }
 

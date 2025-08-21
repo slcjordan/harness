@@ -3,7 +3,6 @@ package exec
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -70,7 +69,6 @@ func StartInteractive(ctx context.Context, listener harness.Notifier[harness.Com
 				case data := <-result.input:
 					input := make([]byte, len(data))
 					copy(input, data)
-					fmt.Printf("%q\n", string(input))
 					io.Copy(stdin, bytes.NewReader(input))
 				case <-ctx.Done():
 					return

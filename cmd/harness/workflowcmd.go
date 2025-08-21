@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -20,7 +19,6 @@ func init() {
 
 	cmd.Subcommand(
 		"workflow", "run temporal workflow worker", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
-			fmt.Println("workflow is running.")
 			workerClient, err := client.Dial(client.Options{
 				HostPort:  config.Workflow.Server,
 				Namespace: "default",
@@ -32,20 +30,20 @@ func init() {
 			w := worker.New(workerClient, config.Workflow.QueueName, worker.Options{})
 
 			// register single-activity workflows
-			GitlabListMRs.RegisterSynchronousWorkflow(w)
-			GitlabUserMessages.RegisterSynchronousWorkflow(w)
-			SlackUserMessages.RegisterSynchronousWorkflow(w)
+			workflow.RegisterSynchronousWorkflow(GitlabListMRs, w)
+			workflow.RegisterSynchronousWorkflow(GitlabUserMessages, w)
+			workflow.RegisterSynchronousWorkflow(SlackUserMessages, w)
 
 			// register complex workflows
 			w.RegisterWorkflowWithOptions(
 				workflow.Chain(
 					workflow.Chain(
-						GitlabListMRs.Workflow(),
+						workflow.Workflow(GitlabListMRs),
 						GitlabUserMessages),
 					SlackUserMessages,
 				),
 				tworkflow.RegisterOptions{
-					Name: workflow.Name(WorkflowGitlabNotifySlack),
+					Name: WorkflowGitlabNotifySlack.Name,
 				},
 			)
 

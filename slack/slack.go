@@ -2,7 +2,6 @@ package slack
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/slack-go/slack"
@@ -30,7 +29,6 @@ func (o *OAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *OAuthHandler) Handle(ctx context.Context, code string) (struct{}, error) {
-	fmt.Printf("redirect uri is: %q\n", config.Slack.RedirectURL)
 	resp, err := slack.GetOAuthV2ResponseContext(ctx, o.Client, config.Slack.ClientID, config.Slack.ClientSecret, code, config.Slack.RedirectURL)
 	if err != nil {
 		return struct{}{}, err

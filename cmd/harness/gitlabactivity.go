@@ -11,6 +11,7 @@ import (
 	"github.com/slcjordan/harness/config"
 	"github.com/slcjordan/harness/db"
 	"github.com/slcjordan/harness/gitlab"
+	"github.com/slcjordan/harness/workflow"
 )
 
 func init() {
@@ -35,8 +36,8 @@ func init() {
 				Pool: pool,
 			},
 		}
-		GitlabListMRs.RegisterActivity(w, listMRs)
-		GitlabUserMessages.RegisterActivity(w, gitlabUserMessages)
+		workflow.RegisterActivity(GitlabListMRs, w, listMRs)
+		workflow.RegisterActivity(GitlabUserMessages, w, gitlabUserMessages)
 		return nil
 	})
 }

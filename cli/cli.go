@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"os"
 
@@ -70,9 +69,6 @@ func (c *Command) Subcommand(name string, usage string, runner Runner, options .
 }
 
 func (c *Command) Run(ctx context.Context, args []string) error {
-	for _, s := range c.cmd.Subcommands {
-		fmt.Printf("%s -> %s\n", c.cmd.Name, s.Name)
-	}
 	app := &cli.App{
 		Name:     c.cmd.Name,
 		Usage:    c.cmd.Usage,
@@ -80,7 +76,6 @@ func (c *Command) Run(ctx context.Context, args []string) error {
 		Action:   c.cmd.Action,
 		Commands: c.cmd.Subcommands,
 	}
-	fmt.Println("running", args)
 	return app.RunContext(ctx, args)
 }
 

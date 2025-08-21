@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/slcjordan/harness/cli"
 	"github.com/slcjordan/harness/config"
@@ -19,7 +18,6 @@ func init() {
 
 	cmd.Subcommand(
 		"activity", "run temporal activity worker", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
-			fmt.Println("activity is running.")
 			workerClient, err := client.Dial(client.Options{
 				HostPort:  config.Workflow.Server,
 				Namespace: "default",

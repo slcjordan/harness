@@ -7,6 +7,7 @@ import (
 
 	"github.com/slcjordan/harness/db"
 	"github.com/slcjordan/harness/slack"
+	"github.com/slcjordan/harness/workflow"
 	"go.temporal.io/sdk/worker"
 )
 
@@ -29,7 +30,7 @@ func init() {
 			},
 			SenderEmail: "jordan.crabtree@vivint.com",
 		}
-		SlackUserMessages.RegisterActivity(w, slackUserMsgsActivity)
+		workflow.RegisterActivity(SlackUserMessages, w, slackUserMsgsActivity)
 		return nil
 	})
 }

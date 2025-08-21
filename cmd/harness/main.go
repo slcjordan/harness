@@ -18,8 +18,10 @@ var WorkOptions []cli.Option
 var ServeOptions []cli.Option
 
 var (
-	GitlabListMRs = harness.Contract[string, harness.MergeRequest]{Queue: "gitlab", Name: "list-mrs"}
-	UserMessages  = harness.Contract[[]harness.UserMessage, struct{}]{Queue: "gitlab", Name: "user-messages"}
+	GitlabListMRs             = harness.Contract[string, []harness.MergeRequest]{Queue: "gitlab", Name: "list-mrs"}
+	GitlabUserMessages        = harness.Contract[[]harness.MergeRequest, []harness.UserMessage]{Queue: "gitlab", Name: "build-mr-user-messages"}
+	SlackUserMessages         = harness.Contract[[]harness.UserMessage, struct{}]{Queue: "slack", Name: "send-user-messages"}
+	WorkflowGitlabNotifySlack = harness.Contract[string, struct{}]{Queue: "coordinator", Name: "fetch-mrs-and-send-user-messages"}
 )
 
 var cmd = cli.NewCommand("harness", "do nothing", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
@@ -27,6 +29,7 @@ var cmd = cli.NewCommand("harness", "do nothing", cli.RunnerFunc(func(ctx contex
 }))
 
 func main() {
+	logger.Init()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

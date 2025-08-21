@@ -13,7 +13,6 @@ import (
 	"github.com/slcjordan/harness/cli"
 	"github.com/slcjordan/harness/config"
 	"github.com/slcjordan/harness/logger"
-	"github.com/slcjordan/harness/workflow"
 	"go.temporal.io/sdk/client"
 )
 
@@ -32,7 +31,7 @@ func init() {
 			r := chi.NewRouter()
 			r.Use(middleware.Logger)
 			r.Route("/workflow", func(subroute chi.Router) {
-				subroute.Post("/"+workflow.Name(WorkflowGitlabNotifySlack), JSONHandler(WorkflowGitlabNotifySlack, temporalClient))
+				subroute.Post("/"+WorkflowGitlabNotifySlack.Name, JSONHandler(WorkflowGitlabNotifySlack, temporalClient))
 			})
 			return nil
 		}), ServeOptions...)
@@ -45,24 +44,24 @@ func JSONHandler[A, B any](c harness.Contract[A, B], wClient client.Client) http
 		var input A
 		err := dec.Decode(&input)
 		if err != nil {
-			logger.Errorf(ctx, "could not decode %T from request body for %q workflow: %s", input, workflow.Name(c), err)
+			logger.Errorf(ctx, "could not decode %T from request body for %q workflow: %s", input, c.Name, err)
 			http.Error(w, err.Error(), 500)
 			return
 		}
 		exe, err := wClient.ExecuteWorkflow(
 			ctx, client.StartWorkflowOptions{
-				TaskQueue: workflow.Queue(c),
-			}, "workflow-"+workflow.Name(c), input,
+				TaskQueue: c.Queue,
+			}, "workflow-"+c.Name, input,
 		)
 		if err != nil {
-			logger.Errorf(ctx, "could not execute workflow %q: %s", workflow.Name(c), err)
+			logger.Errorf(ctx, "could not execute workflow %q: %s", c.Name, err)
 			http.Error(w, err.Error(), 500)
 			return
 		}
 		var result B
 		err = exe.Get(ctx, &result)
 		if err != nil {
-			logger.Errorf(ctx, "could not get workflow %q results: %s", workflow.Name(c), err)
+			logger.Errorf(ctx, "could not get workflow %q results: %s", c.Name, err)
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -70,7 +69,7 @@ func JSONHandler[A, B any](c harness.Contract[A, B], wClient client.Client) http
 		enc.SetIndent("", "  ")
 		err = enc.Encode(result)
 		if err != nil {
-			logger.Errorf(ctx, "could not encode workflow %q results: %s", workflow.Name(c), err)
+			logger.Errorf(ctx, "could not encode workflow %q results: %s", c.Name, err)
 			http.Error(w, err.Error(), 500)
 			return
 		}

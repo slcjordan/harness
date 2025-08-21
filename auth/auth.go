@@ -35,6 +35,5 @@ func (j JWT) Handle(ctx context.Context, camera harness.Camera) (string, error) 
 	}
 
 	result, err := token.SignedString(secret)
-	fmt.Printf("HERE: %q\n", result)
 	return result, err
 }
