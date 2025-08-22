@@ -35,7 +35,7 @@ func init() {
 			})
 			logger.Infof(ctx, "serving at %q", config.HTTPServer.Addr)
 			return http.ListenAndServe(config.HTTPServer.Addr, r)
-		}), ServeOptions...)
+		}), cli.WithWorkflowFlags, cli.WithHTTPServerFlags)
 }
 
 func JSONHandler[A, B any](c harness.Contract[A, B], wClient client.Client) http.HandlerFunc {

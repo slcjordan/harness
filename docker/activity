@@ -13,7 +13,7 @@ COPY . .
 RUN --mount=type=secret,id=netrc,target=/root/.netrc \
     --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    update-ca-certificates && go build -o /usr/local/bin/harness -tags "activitycmd slackgroup gitlabgroup" ./cmd/harness
+    update-ca-certificates && go build -o /usr/local/bin/harness -tags "workcmd slackgroup gitlabgroup" ./cmd/harness
 
 FROM ubuntu:24.04
 
@@ -21,4 +21,4 @@ RUN apt-get update && apt-get install -y ca-certificates
 
 COPY --from=builder /usr/local/bin/harness /usr/local/bin/harness
 
-CMD harness activity
+CMD harness work

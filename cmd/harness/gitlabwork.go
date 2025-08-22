@@ -1,4 +1,4 @@
-//go:build gitlabgroup && activitycmd
+//go:build gitlabgroup && workcmd
 
 package main
 
@@ -8,6 +8,7 @@ import (
 	ggitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.temporal.io/sdk/worker"
 
+	"github.com/slcjordan/harness/cli"
 	"github.com/slcjordan/harness/config"
 	"github.com/slcjordan/harness/db"
 	"github.com/slcjordan/harness/gitlab"
@@ -15,7 +16,7 @@ import (
 )
 
 func init() {
-	ActivityInit = append(ActivityInit, func(ctx context.Context, w worker.Worker) error {
+	WorkInit = append(WorkInit, func(ctx context.Context, w worker.Worker) error {
 		pool, err := db.Connect(ctx)
 		if err != nil {
 			return err
@@ -40,4 +41,6 @@ func init() {
 		workflow.RegisterActivity(GitlabUserMessages, w, gitlabUserMessages)
 		return nil
 	})
+
+	WorkOptions = append(WorkOptions, cli.WithPostgresDSNFlag, cli.WithGitlabTokenFlag)
 }

@@ -1,4 +1,4 @@
-//go:build activitycmd
+//go:build workcmd
 
 package main
 
@@ -11,7 +11,8 @@ import (
 	"go.temporal.io/sdk/worker"
 )
 
-var ActivityInit []func(context.Context, worker.Worker) error
+var WorkInit []func(context.Context, worker.Worker) error
+var WorkOptions []cli.Option
 
 func init() {
 	config.Workflow.QueueName = "harness-worker"
@@ -27,7 +28,7 @@ func init() {
 			}
 			defer workerClient.Close()
 			w := worker.New(workerClient, config.Workflow.QueueName, worker.Options{})
-			for _, f := range ActivityInit {
+			for _, f := range WorkInit {
 				err = f(ctx, w)
 				if err != nil {
 					return err

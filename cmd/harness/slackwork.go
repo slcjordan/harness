@@ -1,10 +1,11 @@
-//go:build slackgroup && activitycmd
+//go:build slackgroup && workcmd
 
 package main
 
 import (
 	"context"
 
+	"github.com/slcjordan/harness/cli"
 	"github.com/slcjordan/harness/db"
 	"github.com/slcjordan/harness/slack"
 	"github.com/slcjordan/harness/workflow"
@@ -12,7 +13,7 @@ import (
 )
 
 func init() {
-	ActivityInit = append(ActivityInit, func(ctx context.Context, w worker.Worker) error {
+	WorkInit = append(WorkInit, func(ctx context.Context, w worker.Worker) error {
 		pool, err := db.Connect(ctx)
 		if err != nil {
 			return err
@@ -33,4 +34,6 @@ func init() {
 		workflow.RegisterActivity(SlackUserMessages, w, slackUserMsgsActivity)
 		return nil
 	})
+
+	WorkOptions = append(WorkOptions, cli.WithSlackFlags)
 }

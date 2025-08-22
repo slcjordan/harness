@@ -14,9 +14,6 @@ func init() {
 	config.Workflow.Server = "workflow-server:7233"
 }
 
-var WorkOptions []cli.Option
-var ServeOptions []cli.Option
-
 var (
 	GitlabListMRs             = harness.Contract[string, []harness.MergeRequest]{Queue: "gitlab", Name: "list-mrs"}
 	GitlabUserMessages        = harness.Contract[[]harness.MergeRequest, []harness.UserMessage]{Queue: "gitlab", Name: "build-mr-user-messages"}

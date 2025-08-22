@@ -53,7 +53,7 @@ func RegisterSynchronousWorkflow[A, B any](c harness.Contract[A, B], w worker.Wo
 		func(ctx workflow.Context, input A) (B, error) {
 			ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 				StartToCloseTimeout: config.Workflow.ActivityTimeout,
-				TaskQueue:           c.Queue,
+				TaskQueue:           config.Workflow.QueueName,
 			})
 			var result B
 			err := workflow.ExecuteActivity(ctx, "activity-"+c.Name, input).Get(ctx, &result)
