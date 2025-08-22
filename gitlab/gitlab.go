@@ -118,16 +118,6 @@ func (l *ListMRs) Handle(ctx context.Context, input string) ([]harness.MergeRequ
 	if err != nil {
 		return nil, fmt.Errorf("could not list current users' MRs: %s", err)
 	}
-	/*
-		mrs := make([]*gitlab.MergeRequest, 0, len(mrList))
-		for _, mr := range mrList {
-			curr, _, err := l.Client.MergeRequests.GetMergeRequest(mr.ProjectID, mr.IID, nil)
-			if err != nil {
-				return nil, fmt.Errorf("could not get mr %s-%d details: %s", mr.ProjectID, mr.IID, err)
-			}
-			mrs = append(mrs, curr)
-		}
-	*/
 
 	return mergeRequests(mrList), nil
 }

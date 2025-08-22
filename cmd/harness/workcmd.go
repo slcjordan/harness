@@ -18,7 +18,7 @@ func init() {
 	config.Workflow.QueueName = "harness-worker"
 
 	cmd.Subcommand(
-		"activity", "run temporal activity worker", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
+		"work", "run temporal activity worker", cli.RunnerFunc(func(ctx context.Context, _ []string) error {
 			workerClient, err := client.Dial(client.Options{
 				HostPort:  config.Workflow.Server,
 				Namespace: "default",
