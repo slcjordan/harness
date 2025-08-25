@@ -30,6 +30,10 @@ func init() {
 			}
 			r := chi.NewRouter()
 			r.Use(middleware.Logger)
+			fs := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.FileServer(http.Dir(config.HTTPServer.FileRoot)).ServeHTTP(w, r)
+			})
+			r.Handle("/app/*", http.StripPrefix("/app/", fs))
 			r.Route("/workflow", func(subroute chi.Router) {
 				subroute.Post("/"+WorkflowGitlabNotifySlack.Name, JSONHandler(WorkflowGitlabNotifySlack, temporalClient))
 			})
