@@ -1,7 +1,7 @@
 .SECONDARY:
 
 MIGRATE_PATH=db/migrations
-PORT=53443
+PORT=8080
 
 # overrideable
 DEV_NAMESPACE?=harness-$(shell git rev-parse --abbrev-ref HEAD)
@@ -30,7 +30,7 @@ TEMPORALIO_VERSION?=1.28
 TEMPORALIO_HOST?=${DEV_NAMESPACE}-temporalio
 TEMPORALIO_DB?=temporalio
 DUMP_FILENAME?=dump.sql
-HARNESS_PORT?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port harness ${PORT})
+UI_PORT?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port harness-ui ${PORT})
 WORKFLOW_SERVER_PORT?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port workflow-ui 8080)
 POSTGRES_CONTAINER_ID?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port -q postgres)
 
@@ -56,8 +56,8 @@ debug:
 	echo ${POSTGRES_CONTAINER_ID}
 
 .PHONY: open-harness
-open-harness:
-	${OPEN_BROWSER} ${HARNESS_PORT}/app/pages/portal-tester/
+open-ui:
+	${OPEN_BROWSER} ${UI_PORT}/app/pages/portal-tester/
 
 .PHONY: open-workflow
 open-workflow:
