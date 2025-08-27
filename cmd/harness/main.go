@@ -15,10 +15,47 @@ func init() {
 }
 
 var (
-	GitlabListMRs             = harness.Contract[string, []harness.MergeRequest]{Queue: "gitlab", Name: "list-mrs"}
-	GitlabUserMessages        = harness.Contract[[]harness.MergeRequest, []harness.UserMessage]{Queue: "gitlab", Name: "build-mr-user-messages"}
-	SlackUserMessages         = harness.Contract[[]harness.UserMessage, struct{}]{Queue: "slack", Name: "send-user-messages"}
-	WorkflowGitlabNotifySlack = harness.Contract[string, struct{}]{Queue: "coordinator", Name: "fetch-mrs-and-send-user-messages"}
+	GitlabListMRs = harness.Contract[
+		string,
+		[]harness.MergeRequest,
+	]{
+		Domain:   "gitlab",
+		Name:     "list-mrs",
+		Version:  harness.V1,
+		Tier:     harness.Admin,
+		Priority: harness.Low,
+		Strategy: harness.Sync,
+	}
+	GitlabUserMessages = harness.Contract[
+		[]harness.MergeRequest,
+		[]harness.UserMessage,
+	]{
+		Domain:   "gitlab",
+		Name:     "build-mr-user-messages",
+		Version:  harness.V1,
+		Tier:     harness.Admin,
+		Priority: harness.Low,
+		Strategy: harness.Sync,
+	}
+	SlackUserMessages = harness.Contract[
+		[]harness.UserMessage,
+		struct{},
+	]{
+		Domain:   "slack",
+		Name:     "send-user-messages",
+		Version:  harness.V1,
+		Tier:     harness.Admin,
+		Priority: harness.Low,
+		Strategy: harness.Sync,
+	}
+	WorkflowGitlabNotifySlack = harness.Contract[string, struct{}]{
+		Domain:   "coordinator",
+		Name:     "fetch-mrs-and-send-user-messages",
+		Version:  harness.V1,
+		Tier:     harness.Admin,
+		Priority: harness.Low,
+		Strategy: harness.Sync,
+	}
 )
 
 var cmd = cli.NewCommand("harness", "do nothing", cli.RunnerFunc(func(ctx context.Context, _ []string) error {

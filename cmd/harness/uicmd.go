@@ -4,16 +4,16 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/slcjordan/harness"
+	"go.temporal.io/sdk/client"
+
 	"github.com/slcjordan/harness/cli"
 	"github.com/slcjordan/harness/config"
+	jhttp "github.com/slcjordan/harness/http"
 	"github.com/slcjordan/harness/logger"
-	"go.temporal.io/sdk/client"
 )
 
 func init() {
@@ -35,48 +35,9 @@ func init() {
 			})
 			r.Handle("/app/*", http.StripPrefix("/app/", fs))
 			r.Route("/workflow", func(subroute chi.Router) {
-				subroute.Post("/"+WorkflowGitlabNotifySlack.Name, JSONHandler(WorkflowGitlabNotifySlack, temporalClient))
+				subroute.Post("/"+WorkflowGitlabNotifySlack.Name, jhttp.JSONHandler(WorkflowGitlabNotifySlack, temporalClient))
 			})
 			logger.Infof(ctx, "serving at %q", config.HTTPServer.Addr)
 			return http.ListenAndServe(config.HTTPServer.Addr, r)
 		}), cli.WithWorkflowFlags, cli.WithHTTPServerFlags)
-}
-
-func JSONHandler[A, B any](c harness.Contract[A, B], wClient client.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		dec := json.NewDecoder(r.Body)
-		var input A
-		err := dec.Decode(&input)
-		if err != nil {
-			logger.Errorf(ctx, "could not decode %T from request body for %q workflow: %s", input, c.Name, err)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		exe, err := wClient.ExecuteWorkflow(
-			ctx, client.StartWorkflowOptions{
-				TaskQueue: c.Queue,
-			}, "workflow-"+c.Name, input,
-		)
-		if err != nil {
-			logger.Errorf(ctx, "could not execute workflow %q: %s", c.Name, err)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		var result B
-		err = exe.Get(ctx, &result)
-		if err != nil {
-			logger.Errorf(ctx, "could not get workflow %q results: %s", c.Name, err)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		err = enc.Encode(result)
-		if err != nil {
-			logger.Errorf(ctx, "could not encode workflow %q results: %s", c.Name, err)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-	}
 }

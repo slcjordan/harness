@@ -10,7 +10,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-type WorkflowFunc[A, B any] func(workflow.Context, A) (B, error)
+type WorkflowFunc[Input, Output any] func(workflow.Context, Input) (Output, error)
 
 func Chain[A, B, C any](f WorkflowFunc[A, B], c harness.Contract[B, C]) WorkflowFunc[A, C] {
 	next := Workflow(c)
@@ -24,7 +24,7 @@ func Chain[A, B, C any](f WorkflowFunc[A, B], c harness.Contract[B, C]) Workflow
 	}
 }
 
-func RegisterActivity[A, B any](c harness.Contract[A, B], w worker.Worker, handler harness.Handler[A, B]) {
+func RegisterActivity[Input, Output any](c harness.Contract[Input, Output], w worker.Worker, handler harness.Handler[Input, Output]) {
 	w.RegisterActivityWithOptions(
 		handler.Handle,
 		activity.RegisterOptions{
@@ -33,29 +33,42 @@ func RegisterActivity[A, B any](c harness.Contract[A, B], w worker.Worker, handl
 	)
 }
 
-func Workflow[A, B any](c harness.Contract[A, B]) WorkflowFunc[A, B] {
-	return func(ctx workflow.Context, input A) (B, error) {
-		var result B
-		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-			StartToCloseTimeout: config.Workflow.ActivityTimeout,
-			TaskQueue:           c.Queue,
-		})
-		err := workflow.ExecuteActivity(ctx, "activity-"+c.Name, input).Get(ctx, &result)
-		if err != nil {
-			logger.Errorf(ctx, "error while running workflow %q: %s", c.Name, err)
-		}
-		return result, err
-	}
-}
-
-func RegisterSynchronousWorkflow[A, B any](c harness.Contract[A, B], w worker.Worker) {
-	w.RegisterWorkflowWithOptions(
-		func(ctx workflow.Context, input A) (B, error) {
+func Workflow[Input, Output any](c harness.Contract[Input, Output]) WorkflowFunc[Input, Output] {
+	if c.Strategy == harness.Sync {
+		return func(ctx workflow.Context, input Input) (Output, error) {
+			var result Output
 			ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 				StartToCloseTimeout: config.Workflow.ActivityTimeout,
-				TaskQueue:           config.Workflow.QueueName,
+				TaskQueue:           c.Queue(),
 			})
-			var result B
+			err := workflow.ExecuteActivity(ctx, "activity-"+c.Name, input).Get(ctx, &result)
+			if err != nil {
+				logger.Errorf(ctx, "error while running workflow %q: %s", c.Name, err)
+			}
+			return result, err
+		}
+	} else if c.Strategy == harness.Async {
+		return func(ctx workflow.Context, input Input) (Output, error) {
+			var result Output
+			ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+				StartToCloseTimeout: config.Workflow.ActivityTimeout,
+				TaskQueue:           c.Queue(),
+			})
+			workflow.ExecuteActivity(ctx, "activity-"+c.Name, input)
+			return result, nil
+		}
+	}
+	panic("unhandled strategy: " + c.Strategy)
+}
+
+func RegisterSynchronousWorkflow[Input, Output any](c harness.Contract[Input, Output], w worker.Worker) {
+	w.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input Input) (Output, error) {
+			ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+				StartToCloseTimeout: config.Workflow.ActivityTimeout,
+				TaskQueue:           c.Queue(),
+			})
+			var result Output
 			err := workflow.ExecuteActivity(ctx, "activity-"+c.Name, input).Get(ctx, &result)
 			if err != nil {
 				logger.Errorf(ctx, "error while running workflow %q: %s", c.Name, err)

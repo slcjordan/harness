@@ -4,9 +4,42 @@ import (
 	"time"
 )
 
-type Contract[A, B any] struct {
-	Queue string
-	Name  string
+type Strategy string
+
+type Priority string
+
+type Tier string
+
+type Version string
+
+const (
+	Async Strategy = "async"
+	Sync  Strategy = "sync"
+
+	High Priority = "high"
+	Low  Priority = "low"
+
+	Admin   Tier = "admin"
+	Public  Tier = "public"
+	Session Tier = "session"
+
+	V1 Version = "v1"
+)
+
+type Contract[Input, Output any] struct {
+	Name     string
+	Domain   string
+	Priority Priority
+	Strategy Strategy
+	Tier     Tier
+	Version  Version
+}
+
+func (c Contract[Input, Output]) Queue() string {
+	return string(c.Version) +
+		"-" + c.Domain +
+		"-" + string(c.Strategy) +
+		"-" + string(c.Priority)
 }
 
 type Stream uint8

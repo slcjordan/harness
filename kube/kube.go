@@ -105,16 +105,16 @@ func (l *Lister) Handle(ctx context.Context, namespaces []string) ([]harness.Nam
 	return result, nil
 }
 
-type PortForwardDeploy[A, B any] struct {
+type PortForwardDeploy[Input, Output any] struct {
 	Config    *rest.Config
 	Clientset *kubernetes.Clientset
-	Handler   harness.Handler[A, B]
+	Handler   harness.Handler[Input, Output]
 	Namespace string
 	Name      string
 	Ports     []string // "%s:%s" (local:remote) format
 }
 
-func (p *PortForwardDeploy[A, B]) Handle(ctx context.Context, input A) (B, error) {
+func (p *PortForwardDeploy[Input, Output]) Handle(ctx context.Context, input A) (B, error) {
 	logger.Infof(ctx, "handling port-forward")
 	var result B
 	logger.Infof(ctx, "finding deployment")

@@ -7,7 +7,7 @@ PORT=8080
 DEV_NAMESPACE?=harness-$(shell git rev-parse --abbrev-ref HEAD)
 NETWORK?=$(shell docker-compose --project-name harness-grpcui config --format json | jq -r '.networks.backend.name')
 HUGO_VERSION?=reg-git-non-root-0.136.5
-PGHOST?=${DEV_NAMESPACE}-db
+PGHOST?=postgres
 PGPASSWORD?=changeme
 PGPORT?=5432
 PGUSER?=user
@@ -32,7 +32,7 @@ TEMPORALIO_DB?=temporalio
 DUMP_FILENAME?=dump.sql
 UI_PORT?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port harness-ui ${PORT})
 WORKFLOW_SERVER_PORT?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port workflow-ui 8080)
-POSTGRES_CONTAINER_ID?=$(shell docker-compose --project-name ${DEV_NAMESPACE} port -q postgres)
+POSTGRES_CONTAINER_ID?=$(shell docker-compose --project-name ${DEV_NAMESPACE} ps -q postgres)
 
 
 .PHONY: start-all
@@ -53,9 +53,9 @@ down-all: hugo-build
 
 .PHONY: debug
 debug:
-	echo ${POSTGRES_CONTAINER_ID}
+	echo ${MIGRATE_VERSION}
 
-.PHONY: open-harness
+.PHONY: open-ui
 open-ui:
 	${OPEN_BROWSER} ${UI_PORT}/app/pages/portal-tester/
 
@@ -203,33 +203,13 @@ postgres-migrate: ## Run all migrations up to the latest version.
 		--project-name ${DEV_NAMESPACE} \
 		run migrate
 
-.PHONY: postgres-migrate-version
-postgres-migrate-version: wait-postgres ## Print the currently applied migration version.
-	docker run \
-		--interactive \
-		--tty \
-		--rm \
-		--name ${PGHOST}-postgres-migrate-version \
-		--network '${NETWORK}' \
-		--volume ${PWD}/${MIGRATE_PATH}:/${MIGRATE_PATH} \
-		migrate/migrate:${GOMIGRATE_VERSION} \
-			-database ${DB_CONN_STRING} \
-			-path /${MIGRATE_PATH} \
-			version
-
 .PHONY: postgres-migrate-force
 postgres-migrate-force: wait-postgres ## Force the migration to a specific version. This is useful in case of a failed migration.
-	docker run \
-		--interactive \
-		--tty \
-		--rm \
-		--name ${PGHOST}-postgres-migrate-force \
-		--network '${NETWORK}' \
-		--volume ${PWD}/${MIGRATE_PATH}:/${MIGRATE_PATH} \
-		migrate/migrate:${GOMIGRATE_VERSION} \
-			-database ${DB_CONN_STRING} \
-			-path /${MIGRATE_PATH} \
-			force ${MIGRATE_VERSION}
+	MIGRATE_PATH=${MIGRATE_PATH} \
+	MIGRATE_VERSION=${MIGRATE_VERSION} \
+	docker-compose \
+		--project-name ${DEV_NAMESPACE} \
+		run migrate-force
 
 .PHONY: postgres-schema-dump
 postgres-schema-dump: postgres-migrate ## create postgres schema dump file under db/sqlc, which is necessary for sqlc

@@ -108,6 +108,8 @@ services:
       PGDATABASE: ${PGDATABASE}
     networks:
       - backend
+    volumes:
+      - ./db:/db
     command:
       - "psql"
       - "--pset"
@@ -149,6 +151,23 @@ services:
       - "-path"
       - "/${MIGRATE_PATH}"
       - "goto"
+      - "${MIGRATE_VERSION}"
+  migrate-force:
+    profiles:
+      - jobs
+    depends_on:
+      - postgres
+    networks:
+      - backend
+    volumes:
+      - ./${MIGRATE_PATH}:/${MIGRATE_PATH}
+    image: migrate/migrate:${GOMIGRATE_VERSION}
+    command: 
+      - "-database"
+      - "postgresql://${PGUSER}:${PGPASSWORD}@postgres:${PGPORT}/${PGDATABASE}?sslmode=disable"
+      - "-path"
+      - "/${MIGRATE_PATH}"
+      - "force"
       - "${MIGRATE_VERSION}"
 
 networks:
