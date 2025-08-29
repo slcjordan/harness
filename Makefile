@@ -5,7 +5,7 @@ PORT=8080
 
 # overrideable
 DEV_NAMESPACE?=harness-$(shell git rev-parse --abbrev-ref HEAD)
-NETWORK?=$(shell docker-compose --project-name harness-grpcui config --format json | jq -r '.networks.backend.name')
+NETWORK?=$(shell docker-compose --project-name ${DEV_NAMESPACE} config --format json | jq -r '.networks.backend.name')
 HUGO_VERSION?=reg-git-non-root-0.136.5
 PGHOST?=postgres
 PGPASSWORD?=changeme
@@ -53,7 +53,7 @@ down-all: hugo-build
 
 .PHONY: debug
 debug:
-	echo ${MIGRATE_VERSION}
+	docker-compose --project-name ${DEV_NAMESPACE} port harness-ui ${PORT}
 
 .PHONY: open-ui
 open-ui:
