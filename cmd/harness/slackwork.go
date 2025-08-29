@@ -7,13 +7,14 @@ import (
 
 	"github.com/slcjordan/harness/cli"
 	"github.com/slcjordan/harness/db"
+	"github.com/slcjordan/harness/scheduler"
 	"github.com/slcjordan/harness/slack"
 	"github.com/slcjordan/harness/workflow"
 	"go.temporal.io/sdk/worker"
 )
 
 func init() {
-	WorkInit = append(WorkInit, func(ctx context.Context, w worker.Worker) error {
+	RegisterWorkflowHook(func(ctx context.Context, w func(string) worker.Worker, p *scheduler.Priority) error {
 		pool, err := db.Connect(ctx)
 		if err != nil {
 			return err

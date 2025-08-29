@@ -1,8 +1,15 @@
 package harness
 
 import (
+	"context"
 	"time"
 )
+
+type HandlerFunc[Input, Output any] func(context.Context, Input) (Output, error)
+
+func (h HandlerFunc[Input, Output]) Handle(parent context.Context, input Input) (Output, error) {
+	return h(parent, input)
+}
 
 type Strategy string
 
@@ -27,12 +34,13 @@ const (
 )
 
 type Contract[Input, Output any] struct {
-	Name     string
-	Domain   string
+	Name    string
+	Domain  string
+	Version Version
+
 	Priority Priority
 	Strategy Strategy
 	Tier     Tier
-	Version  Version
 }
 
 func (c Contract[Input, Output]) Queue() string {
@@ -40,6 +48,20 @@ func (c Contract[Input, Output]) Queue() string {
 		"-" + c.Domain +
 		"-" + string(c.Strategy) +
 		"-" + string(c.Priority)
+}
+
+func (c Contract[Input, Output]) Workflow() string {
+	return string(c.Version) +
+		"-" + c.Domain +
+		"-" + string(c.Name) +
+		"-workflow"
+}
+
+func (c Contract[Input, Output]) Activity() string {
+	return string(c.Version) +
+		"-" + c.Domain +
+		"-" + string(c.Name) +
+		"-activity"
 }
 
 type Stream uint8

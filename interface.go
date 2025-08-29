@@ -4,8 +4,8 @@ import (
 	"context"
 )
 
-type Handler[Req, Resp any] interface {
-	Handle(context.Context, Req) (Resp, error)
+type Handler[Input, Output any] interface {
+	Handle(context.Context, Input) (Output, error)
 }
 
 type Daemon interface {
