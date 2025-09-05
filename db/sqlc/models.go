@@ -5,8 +5,54 @@
 package sqlc
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type EmailStatus string
+
+const (
+	EmailStatusUnverified EmailStatus = "unverified"
+	EmailStatusActive     EmailStatus = "active"
+	EmailStatusSuspended  EmailStatus = "suspended"
+)
+
+func (e *EmailStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EmailStatus(s)
+	case string:
+		*e = EmailStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EmailStatus: %T", src)
+	}
+	return nil
+}
+
+type NullEmailStatus struct {
+	EmailStatus EmailStatus
+	Valid       bool // Valid is true if EmailStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEmailStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.EmailStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EmailStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEmailStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EmailStatus), nil
+}
 
 type GitlabUserCache struct {
 	GitlabUserID int32
@@ -49,4 +95,30 @@ type SlackOauthResponse struct {
 	TeamID                          string
 	TeamName                        string
 	TokenType                       string
+}
+
+type User struct {
+	ID        int64
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+type UserEmail struct {
+	ID        int64
+	UserID    int64
+	Address   string
+	Status    EmailStatus
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+type WorkflowDefault struct {
+	ID        int64
+	UserID    int64
+	Namespace string
+	Domain    string
+	Name      string
+	Payload   []byte
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
 }

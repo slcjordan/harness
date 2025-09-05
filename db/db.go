@@ -122,3 +122,30 @@ func (u *UpsertGitlabUser) Handle(ctx context.Context, gitlabUser harness.Gitlab
 		Email:        gitlabUser.Email,
 	})
 }
+
+type InsertUser struct {
+	Pool *pgxpool.Pool
+}
+
+func (i *InsertUser) Handle(ctx context.Context, _ struct{}) (int64, error) {
+	queries := sqlc.New(i.Pool)
+	return queries.InsertUser(ctx)
+}
+
+type UpsertUserEmail struct {
+	Pool *pgxpool.Pool
+}
+
+func (u *UpsertUserEmail) Handle(ctx context.Context, email harness.CreateEmailRequest) (harness.SavedEmail, error) {
+	queries := sqlc.New(u.Pool)
+	id, err := queries.UpsertUserEmail(ctx, sqlc.UpsertUserEmailParams{
+		UserID:  email.UserID,
+		Address: email.Email,
+		Status:  sqlc.EmailStatusUnverified,
+	})
+	return harness.SavedEmail{
+		ID:     id,
+		UserID: email.UserID,
+		Email:  email.Email,
+	}, err
+}

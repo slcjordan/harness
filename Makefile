@@ -42,6 +42,7 @@ start-all: hugo-build
 		--progress plain \
 		up \
 			--build \
+			--remove-orphans \
 			--detach
 
 .PHONY: down-all
@@ -137,7 +138,9 @@ postgres-dump: wait-postgres
 psql: ## Start an interactive postgres shell
 	docker-compose \
 		--project-name ${DEV_NAMESPACE} \
-		run psql
+		run \
+			--remove-orphans \
+			psql
 
 .PHONY: pgadmin
 pgadmin: wait-postgres ## Start pgadmin and open in browser window
@@ -186,7 +189,9 @@ postgres-migrate-create: ## Helps the user create a pair of up/down migration sc
 	MIGRATE_VERSION=${MIGRATE_VERSION} \
 	docker-compose \
 		--project-name ${DEV_NAMESPACE} \
-		run migrate create \
+		run \
+			--remove-orphans \
+			migrate create \
 				-ext sql \
 				-dir /${MIGRATE_PATH} \
 				-seq \
@@ -201,20 +206,26 @@ postgres-migrate: ## Run all migrations up to the latest version.
 	MIGRATE_VERSION=${MIGRATE_VERSION} \
 	docker-compose \
 		--project-name ${DEV_NAMESPACE} \
-		run migrate
+		run \
+			--remove-orphans \
+			migrate
 
 .PHONY: postgres-migrate-force
-postgres-migrate-force: wait-postgres ## Force the migration to a specific version. This is useful in case of a failed migration.
+postgres-migrate-force: ## Force the migration to a specific version. This is useful in case of a failed migration.
 	MIGRATE_PATH=${MIGRATE_PATH} \
 	MIGRATE_VERSION=${MIGRATE_VERSION} \
 	docker-compose \
 		--project-name ${DEV_NAMESPACE} \
-		run migrate-force
+		run \
+			--remove-orphans \
+			migrate-force
 
 .PHONY: postgres-schema-dump
 postgres-schema-dump: postgres-migrate ## create postgres schema dump file under db/sqlc, which is necessary for sqlc
 	docker-compose \
 		--project-name ${DEV_NAMESPACE} \
-		run schema-dump
+		run \
+			--remove-orphans \
+			schema-dump
 	sudo chown $(shell id -u):$(shell id -g) db/sqlc/schema.sql
 	chmod 440 db/sqlc/schema.sql

@@ -184,3 +184,14 @@ type Camera struct {
 	UUID      string
 	PanelHWID string
 }
+
+type CreateEmailRequest struct {
+	UserID int64
+	Email  string
+}
+
+type SavedEmail struct {
+	ID     int64
+	UserID int64
+	Email  string
+}
